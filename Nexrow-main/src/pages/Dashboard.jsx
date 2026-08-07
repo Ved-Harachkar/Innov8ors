@@ -141,7 +141,7 @@ export default function Dashboard() {
             <div className="stat-row" style={{marginBottom:'1rem'}}>
               <div className="stat-box"><div className="stat-box-num" style={{color:'var(--gold)'}}>{formatINR(mainContract.amount || mainContract.budget || 50000)}</div><div className="stat-box-label">Budget</div></div>
               <div className="stat-box"><div className="stat-box-num" style={{fontSize:'1.1rem'}}>{mainContract.deadline || '7 Days'}</div><div className="stat-box-label">Deadline</div></div>
-              <div className="stat-box"><div className="stat-box-num" style={{fontSize:'1.1rem'}}>{mainContract.freelancer || 'demo@freelancer.com'}</div><div className="stat-box-label">Freelancer</div></div>
+              <div className="stat-box" style={{ minWidth: 0, overflow: 'hidden' }}><div className="stat-box-num" style={{fontSize:'0.8rem', wordBreak: 'break-all'}}>{mainContract.freelancer || 'demo@freelancer.com'}</div><div className="stat-box-label">Freelancer</div></div>
             </div>
             <button className="btn btn-gold btn-full" onClick={handleAcceptContract}>Accept & Start Work</button>
           </div>
