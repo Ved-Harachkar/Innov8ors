@@ -382,7 +382,7 @@ export default function Status() {
                     <div className="milestone-amount">{formatINR(m.amount)}</div>
 
                     {/* FREELANCER ACTION: Mark milestone complete */}
-                    {!isClient && isFunded && !isSubmitted && !isReleased && !isRefunded && !isCompleted && (
+                    {!isClient && isFunded && !isSubmitted && !isReleased && !isRefunded && !isCompleted && milestones.slice(0, idx).every(prev => prev.paymentStatus === 'RELEASED') && (
                       <div className="milestone-actions">
                         <button
                           className="btn btn-gold"
