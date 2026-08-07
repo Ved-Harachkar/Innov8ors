@@ -373,7 +373,7 @@ class AlgorandServiceClass {
       sender: clientAccount.addr,
       appIndex: appId,
       suggestedParams: optInParams,
-      appArgs: [new Uint8Array(Buffer.from('opt_in'))]
+      appArgs: [new TextEncoder().encode('opt_in')]
     });
 
     const signedOptIn = optInTx.signTxn(clientAccount.sk);
@@ -418,7 +418,7 @@ class AlgorandServiceClass {
       appIndex: appId,
       suggestedParams: params,
       appArgs: [
-        new Uint8Array(Buffer.from('release')),
+        new TextEncoder().encode('release'),
         algosdk.encodeUint64(rawAmount)
       ]
     });
@@ -451,7 +451,7 @@ class AlgorandServiceClass {
       appIndex: appId,
       suggestedParams: params,
       appArgs: [
-        new Uint8Array(Buffer.from('release')),
+        new TextEncoder().encode('release'),
         algosdk.encodeUint64(remainingUSDC)
       ]
     });
@@ -482,7 +482,7 @@ class AlgorandServiceClass {
       appIndex: appId,
       suggestedParams: params,
       appArgs: [
-        new Uint8Array(Buffer.from('refund')),
+        new TextEncoder().encode('refund'),
         algosdk.encodeUint64(remainingUSDC)
       ]
     });
@@ -510,7 +510,7 @@ class AlgorandServiceClass {
       sender: clientAccount.addr,
       appIndex: appId,
       suggestedParams: params,
-      appArgs: [new Uint8Array(Buffer.from('dispute'))]
+      appArgs: [new TextEncoder().encode('dispute')]
     });
 
     const signedDispute = disputeTx.signTxn(clientAccount.sk);
