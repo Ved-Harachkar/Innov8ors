@@ -159,7 +159,10 @@ class NexrowDBClass {
           created_at: project.createdAt
         });
       }
-    } catch (e) { console.warn('Firestore project insert failed:', e); }
+    } catch (e) {
+      console.warn('Firestore project insert failed:', e);
+      throw new Error('Firestore project sync failed: ' + e.message);
+    }
 
     // Save to localStorage
     const contracts = JSON.parse(localStorage.getItem('nexrow_contracts') || '[]');
@@ -203,7 +206,10 @@ class NexrowDBClass {
         if (updates.algorandAppId) dbUpdates.algorand_app_id = updates.algorandAppId;
         await updateDoc(doc(db, 'projects', id), dbUpdates);
       }
-    } catch (e) { console.warn('Firestore project update failed:', e); }
+    } catch (e) {
+      console.warn('Firestore project update failed:', e);
+      throw new Error('Firestore project update failed: ' + e.message);
+    }
     return this.projects[idx];
   }
 
@@ -244,7 +250,10 @@ class NexrowDBClass {
           created_at: milestone.createdAt
         });
       }
-    } catch (e) { console.warn('Firestore milestone insert failed:', e); }
+    } catch (e) {
+      console.warn('Firestore milestone insert failed:', e);
+      throw new Error('Firestore milestone sync failed: ' + e.message);
+    }
 
     return milestone;
   }
@@ -262,7 +271,10 @@ class NexrowDBClass {
           if (updates.paymentStatus) dbUpdates.payment_status = updates.paymentStatus;
           await updateDoc(doc(db, 'milestones', id), dbUpdates);
         }
-      } catch (e) { console.warn('Firestore milestone update failed:', e); }
+      } catch (e) {
+        console.warn('Firestore milestone update failed:', e);
+        throw new Error('Firestore milestone update failed: ' + e.message);
+      }
     }
     return this.milestones[idx];
   }

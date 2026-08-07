@@ -125,6 +125,28 @@ p  { color: var(--text2); }
   letter-spacing: normal; padding: 0.8rem; gap: 0.8rem;
 }
 .btn-google:hover { border-color: var(--border2); background: var(--card); }
+.btn-remove {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  height: 42px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+.btn-remove:hover:not(:disabled) {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+.btn-remove:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 .rounded-full { border-radius: 9999px; }
 
 /* ── BADGES ── */

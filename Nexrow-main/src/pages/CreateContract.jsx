@@ -197,14 +197,9 @@ export default function CreateContract() {
                       </div>
                       <button
                         type="button"
+                        className="btn-remove"
                         onClick={() => removeMilestone(idx)}
                         disabled={milestones.length <= 1}
-                        style={{
-                          background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--red)',
-                          height: '42px', cursor: milestones.length <= 1 ? 'not-allowed' : 'pointer',
-                          opacity: milestones.length <= 1 ? 0.3 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontFamily: "'DM Mono', monospace", fontSize: '0.85rem', transition: 'all 0.2s'
-                        }}
                       >
                         ✕
                       </button>
