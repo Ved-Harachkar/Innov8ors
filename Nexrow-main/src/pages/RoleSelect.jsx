@@ -21,7 +21,7 @@ export default function RoleSelect() {
         const userSnap = await getDoc(doc(db, 'profiles', user.id));
         if (userSnap.exists() && userSnap.data()?.role) {
           const r = userSnap.data().role.toLowerCase();
-          navigate(r === 'client' ? '/create-contract' : '/dashboard', { replace: true });
+          navigate('/dashboard', { replace: true });
         }
       }
     } catch (e) {
@@ -79,7 +79,7 @@ export default function RoleSelect() {
 
           <button
             className="role-card"
-            onClick={() => handleSetRole('Client', '/client-join')}
+            onClick={() => handleSetRole('Client', '/dashboard')}
             disabled={!!loadingRole}
             style={{ opacity: loadingRole === 'Client' ? 0.5 : 1 }}
           >

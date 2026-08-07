@@ -19,8 +19,7 @@ export default function Login() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user) {
-      const r = (role || 'Client').toLowerCase();
-      navigate(r === 'client' ? '/create-contract' : '/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [user, role, navigate]);
 
@@ -58,7 +57,7 @@ export default function Login() {
         const dbRole = prof?.role || selectedRole;
         setAlert({ type: 'success', message: `Welcome back! Logging in as ${dbRole}...` });
         setTimeout(() => {
-          navigate(dbRole.toLowerCase() === 'client' ? '/create-contract' : '/dashboard');
+          navigate('/dashboard');
         }, 600);
       } catch (err) {
         setLoading(false);
