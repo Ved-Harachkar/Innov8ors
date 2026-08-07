@@ -53,7 +53,7 @@ export default function Dashboard() {
     const projects = NexrowDB.getProjects();
     projects.forEach(p => {
       const isClientMatch = !isFreelancer && p.clientEmail === user.email;
-      const isFreelancerMatch = isFreelancer && p.freelancerEmail === user.email;
+      const isFreelancerMatch = isFreelancer && (p.freelancerEmail === user.email || p.freelancerEmail === 'Open Pool (Any Freelancer)');
       if (isClientMatch || isFreelancerMatch) {
         collected.push({
           id: p.id,
