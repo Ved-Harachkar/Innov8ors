@@ -22,13 +22,15 @@ class NexrowDBClass {
       if (db) {
         const q1 = query(collection(db, 'projects'), where('client_id', '==', user.id));
         const q2 = query(collection(db, 'projects'), where('freelancer_email', '==', user.email));
+        const q3 = query(collection(db, 'projects'), where('freelancer_email', '==', 'Open Pool (Any Freelancer)'));
         
-        const [snap1, snap2] = await Promise.all([
+        const [snap1, snap2, snap3] = await Promise.all([
           getDocs(q1).catch(() => ({ docs: [] })),
-          getDocs(q2).catch(() => ({ docs: [] }))
+          getDocs(q2).catch(() => ({ docs: [] })),
+          getDocs(q3).catch(() => ({ docs: [] }))
         ]);
 
-        const projectDocs = [...(snap1.docs || []), ...(snap2.docs || [])];
+        const projectDocs = [...(snap1.docs || []), ...(snap2.docs || []), ...(snap3.docs || [])];
         const loadedProjects = [];
 
         projectDocs.forEach(d => {
@@ -55,6 +57,33 @@ class NexrowDBClass {
 
         if (loadedProjects.length > 0) {
           this.projects = loadedProjects;
+          
+          // Fetch milestones for all loaded projects
+          const projectIds = loadedProjects.map(p => p.id);
+          const loadedMilestones = [];
+          await Promise.all(projectIds.map(async (pid) => {
+            const mq = query(collection(db, 'milestones'), where('project_id', '==', pid));
+            const mSnap = await getDocs(mq).catch(() => ({ docs: [] }));
+            mSnap.docs.forEach(md => {
+              const mdata = md.data();
+              if (!loadedMilestones.find(m => m.id === md.id)) {
+                loadedMilestones.push({
+                  id: md.id,
+                  projectId: mdata.project_id,
+                  title: mdata.title,
+                  description: mdata.description || '',
+                  amount: mdata.amount,
+                  orderIndex: mdata.order_index,
+                  workflowStatus: mdata.workflow_status || 'PENDING',
+                  paymentStatus: mdata.payment_status || 'UNFUNDED',
+                  createdAt: mdata.created_at
+                });
+              }
+            });
+          }));
+          if (loadedMilestones.length > 0) {
+            this.milestones = loadedMilestones;
+          }
         }
       }
       this._synced = true;
@@ -200,6 +229,23 @@ class NexrowDBClass {
       createdAt: new Date().toISOString()
     };
     this.milestones.push(milestone);
+
+    // Sync to Firestore
+    try {
+      if (db) {
+        await setDoc(doc(db, 'milestones', milestone.id), {
+          project_id: milestone.projectId,
+          title: milestone.title,
+          description: milestone.description,
+          amount: milestone.amount,
+          order_index: milestone.orderIndex,
+          workflow_status: milestone.workflowStatus,
+          payment_status: milestone.paymentStatus,
+          created_at: milestone.createdAt
+        });
+      }
+    } catch (e) { console.warn('Firestore milestone insert failed:', e); }
+
     return milestone;
   }
 
@@ -207,6 +253,16 @@ class NexrowDBClass {
     const idx = this.milestones.findIndex(m => m.id === id);
     if (idx !== -1) {
       this.milestones[idx] = { ...this.milestones[idx], ...updates };
+
+      // Sync to Firestore
+      try {
+        if (db) {
+          const dbUpdates = {};
+          if (updates.workflowStatus) dbUpdates.workflow_status = updates.workflowStatus;
+          if (updates.paymentStatus) dbUpdates.payment_status = updates.paymentStatus;
+          await updateDoc(doc(db, 'milestones', id), dbUpdates);
+        }
+      } catch (e) { console.warn('Firestore milestone update failed:', e); }
     }
     return this.milestones[idx];
   }
