@@ -150,12 +150,12 @@ class NexrowDBClass {
           client_email: project.clientEmail,
           client_id: project.clientId,
           freelancer_email: project.freelancerEmail,
-          freelancer_id: project.freelancerId,
+          freelancer_id: project.freelancerId || null,
           total_budget: project.totalBudget,
           payment_type: project.paymentType,
           deadline: project.deadline,
           status: project.status,
-          algorand_app_id: project.algorandAppId,
+          algorand_app_id: project.algorandAppId || null,
           created_at: project.createdAt
         });
       }
