@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexrow — Live Execution Dashboard</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .live-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 1.8rem;
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+    }
+
+    .status-badge-pulse {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--amber);
+      background: var(--amber-dim);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 0.35rem 0.8rem;
+      border-radius: 9999px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--amber);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.2rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: all 0.3s ease;
+      margin-bottom: 0.8rem;
+    }
+
+    .step-item.active {
+      background: var(--gold-dim);
+      border-color: var(--gold);
+    }
+
+    .step-item.completed {
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .step-icon-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--card);
+      color: var(--text3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .step-item.active .step-icon-circle {
+      background: var(--gold);
+      color: #000;
+    }
+
+    .step-item.completed .step-icon-circle {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .live-stream-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1.2rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text2);
+      max-height: 220px;
+      overflow-y: auto;
+      border-radius: var(--radius);
+    }
+
+    .log-line {
+      margin-bottom: 0.5rem;
+      display: flex;
+      gap: 0.6rem;
+      transition: all 0.2s;
+    }
+
+    .log-line.latest {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .log-time {
+      color: var(--text3);
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="topnav">
+    <a href="dashboard.html" class="nav-logo">Ne<span>x</span>row</a>
+    <div class="nav-right">
+      <span class="nav-user" id="navUser">Client Portal</span>
+      <button class="nav-logout" id="logoutBtn">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-wrap" style="max-width: 760px; padding-top: 2.5rem; padding-bottom: 4rem;">
+      
+      <!-- Page Title Header -->
+      <div class="flex-between mb-3 fade-up">
+        <div>
+          <div class="tag">// REAL-TIME AI WORKFLOW</div>
+          <h1 style="font-size: 1.8rem; margin-top: 0.2rem;">Live Execution Dashboard</h1>
+        </div>
+        <div class="status-badge-pulse" id="liveStatusBadge">
+          <span class="pulse-dot"></span>
+          <span id="statusText">Task Running ⚙️</span>
+        </div>
+      </div>
+
+      <!-- 1️⃣ CONTRACT SUMMARY (TOP CARD) -->
+      <div class="live-card fade-up">
+        <div class="flex-between mb-2">
+          <span class="mono gold" style="font-size: 0.72rem; letter-spacing: 0.1em;" id="liveContractId">
+            CONTRACT ID: NX-00000000
+          </span>
+          <span class="badge badge-amber" id="liveStatusLabel">Status: Pending</span>
+        </div>
+
+        <h2 style="font-size: 1.4rem; margin-bottom: 0.4rem;" id="liveTitle">
+          Full-Stack Web App Escrow
+        </h2>
+        <p style="font-size: 0.88rem; color: var(--text2); margin-bottom: 1.5rem;" id="liveDesc">
+          Initializing AI verification pipeline and escrow locking mechanism...
+        </p>
+
+        <!-- 3️⃣ COST TRACKER 💰 (DYNAMIC COST DISPLAY) -->
+        <div class="stat-row" style="margin-bottom: 0;">
+          <div class="stat-box">
+            <div class="stat-box-num" style="color: var(--gold);" id="liveCost">₹ 0</div>
+            <div class="stat-box-label">Escrow Locked 💰</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-num" style="font-size: 1.2rem;" id="liveFreelancer">demo@freelancer.com</div>
+            <div class="stat-box-label">Assigned Freelancer</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-num" style="font-size: 1.2rem;" id="liveDeadline">7 Days</div>
+            <div class="stat-box-label">Target Deadline</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2️⃣ LIVE EXECUTION FLOW ⚙️ -->
+      <div class="live-card fade-up">
+        <div class="form-section-title">// LIVE EXECUTION FLOW ⚙️</div>
+        
+        <div id="flowStepsContainer">
+          <div class="step-item active" id="step-0">
+            <div class="step-icon-circle">✔</div>
+            <div>
+              <div style="font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--gold);">
+                [✔] Contract Created
+              </div>
+              <div style="font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text2); margin-top: 0.2rem;">
+                Contract payload initialized and saved to local system storage.
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item" id="step-1">
+            <div class="step-icon-circle">⚙️</div>
+            <div>
+              <div style="font-family: 'Syne', sans-serif; font-size: 0.95rem; color: var(--text);">
+                [⚙️] AI Verifying Requirements
+              </div>
+              <div style="font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text2); margin-top: 0.2rem;">
+                Parsing contract deliverables, timelines, and payment milestone rules.
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item" id="step-2">
+            <div class="step-icon-circle">⏳</div>
+            <div>
+              <div style="font-family: 'Syne', sans-serif; font-size: 0.95rem; color: var(--text);">
+                [⏳] Assigning Freelancer
+              </div>
+              <div style="font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text2); margin-top: 0.2rem;">
+                Locking funds in smart escrow vault and sending invitation to provider.
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item" id="step-3">
+            <div class="step-icon-circle">⏳</div>
+            <div>
+              <div style="font-family: 'Syne', sans-serif; font-size: 0.95rem; color: var(--text);">
+                [⏳] Waiting for Submission
+              </div>
+              <div style="font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text2); margin-top: 0.2rem;">
+                Escrow active. System awaiting proof of work upload from freelancer.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4️⃣ SYSTEM LOGS PANEL (🔥 VERY IMPORTANT) -->
+      <div class="live-card fade-up">
+        <div class="form-section-title">// SYSTEM LOGS PANEL 🔥</div>
+        <div class="live-stream-box" id="logContainer">
+          <!-- Pushed dynamically -->
+        </div>
+      </div>
+
+      <!-- 5️⃣ ACTION BUTTON: PROCEED TO SUBMISSION -->
+      <div class="fade-up">
+        <button type="button" class="btn btn-gold btn-full" id="proceedBtn" style="font-size: 0.88rem; padding: 1.1rem 2rem;">
+          Proceed to Submission →
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    requireAuth((user) => {
+      setNavUser(user);
+      setupLogout();
+
+      // 📥 1. DATA SOURCE: Fetch contract from localStorage
+      let targetBudget = 50000;
+      const storedContract = localStorage.getItem("contract");
+      if (storedContract) {
+        try {
+          const contract = JSON.parse(storedContract);
+          document.getElementById('liveContractId').textContent = 'CONTRACT ID: ' + (contract.contractId || contract.contract_id || 'NX-DEMO');
+          document.getElementById('liveTitle').textContent = contract.title || 'Secure Project Contract';
+          document.getElementById('liveDesc').textContent = contract.description || 'Escrow contract initialized.';
+          document.getElementById('liveFreelancer').textContent = contract.freelancer || contract.freelancer_identifier || 'demo@freelancer.com';
+          document.getElementById('liveDeadline').textContent = contract.deadline || '7 Days';
+          document.getElementById('liveStatusLabel').textContent = `Status: ${contract.status || 'Pending'}`;
+          targetBudget = Number(contract.amount || contract.budget || 50000);
+        } catch (e) {
+          console.warn("Parse contract error:", e);
+        }
+      }
+
+      // 💰 3. COST TRACKER: Dynamic cost increment (+500 every 2s)
+      let currentCost = 0;
+      const costEl = document.getElementById('liveCost');
+      const costTimer = setInterval(() => {
+        currentCost += 500;
+        if (currentCost >= targetBudget) {
+          currentCost = targetBudget;
+          clearInterval(costTimer);
+        }
+        if (costEl) costEl.textContent = '₹ ' + currentCost.toLocaleString('en-IN');
+      }, 2000);
+
+      // ⚙️ 2. LIVE EXECUTION FLOW & 4. SYSTEM LOGS
+      let currentStep = 0;
+      const logContainer = document.getElementById('logContainer');
+
+      const getTime = () => new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      function addLog(msg) {
+        if (!logContainer) return;
+        const line = document.createElement('div');
+        line.className = 'log-line latest fade-in';
+        line.innerHTML = `<span class="log-time">[${getTime()}]</span> <span>${msg}</span>`;
+        
+        // Remove previous latest highlight
+        document.querySelectorAll('.log-line.latest').forEach(el => el.classList.remove('latest'));
+        logContainer.appendChild(line);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      addLog(`Contract initialized. ID saved to system.`);
+
+      const stepTimer = setInterval(() => {
+        if (currentStep < 3) {
+          currentStep++;
+          updateStepUI(currentStep);
+        } else {
+          clearInterval(stepTimer);
+        }
+      }, 3000);
+
+      function updateStepUI(stepIdx) {
+        for (let i = 0; i <= 3; i++) {
+          const el = document.getElementById(`step-${i}`);
+          if (!el) continue;
+          el.classList.remove('active', 'completed');
+          if (i < stepIdx) {
+            el.classList.add('completed');
+            el.querySelector('.step-icon-circle').textContent = '✔';
+          } else if (i === stepIdx) {
+            el.classList.add('active');
+            el.querySelector('.step-icon-circle').textContent = i === 3 ? '⏳' : '⚙️';
+          }
+        }
+
+        if (stepIdx === 1) {
+          addLog("AI validation started. Scope & milestone rules verified.");
+        } else if (stepIdx === 2) {
+          addLog("Freelancer matched. Vault escrow funds locked safely.");
+        } else if (stepIdx === 3) {
+          addLog("Awaiting submission artifact from provider.");
+          const badge = document.getElementById('liveStatusBadge');
+          if (badge) {
+            badge.style.background = 'var(--green-dim)';
+            badge.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+            badge.style.color = 'var(--green)';
+            document.getElementById('statusText').textContent = 'Escrow Active 💰';
+          }
+          document.getElementById('liveStatusLabel').textContent = 'Status: Active Escrow';
+        }
+      }
+
+      // 5️⃣ ACTION BUTTON: Proceed to Submission -> Redirect to upload-proof.html
+      const proceedBtn = document.getElementById('proceedBtn');
+      if (proceedBtn) {
+        proceedBtn.addEventListener('click', () => {
+          window.location.href = 'upload-proof.html';
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>

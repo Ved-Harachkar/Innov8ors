@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexrow — Create Secure Contract</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .page-wrap {
+      max-width: 600px;
+    }
+
+    .terms-box {
+      background: var(--gold-dim2);
+      border: 1px solid rgba(201, 168, 76, 0.2);
+      padding: 1.2rem;
+      border-radius: var(--radius);
+    }
+
+    .form-section {
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 1.2rem;
+      background: var(--card);
+      border-radius: var(--radius);
+    }
+
+    .form-section-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .form-section-title::before {
+      content: '//';
+      color: var(--gold);
+    }
+
+    .milestone-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: var(--radius);
+      margin-bottom: 0.8rem;
+    }
+
+    .share-options-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: var(--radius);
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .share-options-box.active {
+      display: block;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    .share-btn {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+      border-radius: var(--radius);
+      margin-bottom: 0.5rem;
+    }
+
+    .share-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="topnav">
+    <a href="dashboard.html?section=active-contracts" class="nav-logo">Ne<span>x</span>row</a>
+    <div class="nav-right">
+      <span class="nav-user" id="navUser">Client Portal</span>
+      <button class="nav-logout" id="logoutBtn">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-wrap" style="padding-top:2.5rem; padding-bottom: 4rem;">
+      <div class="page-header fade-up mb-3">
+        <div class="tag">// CLIENT — ESCROW DEPOSIT</div>
+        <h1>Create Secure Contract</h1>
+        <p class="mt-1" style="font-size:0.88rem">
+          Define contract scope and lock payment in escrow. Verified release upon completion.
+        </p>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <form id="contractForm" onsubmit="return false;">
+        <!-- Service & Contract Details -->
+        <div class="form-section fade-up">
+          <div class="form-section-title">1. Contract Overview</div>
+          <div class="field">
+            <label>Contract Title</label>
+            <input type="text" name="title" id="contractTitle" placeholder="e.g. Full-Stack Web App Development" required />
+          </div>
+          <div class="field">
+            <label>Project Description</label>
+            <textarea name="description" id="contractDesc" placeholder="Describe key scope, deliverables, technical stack, and milestone breakdown..." required></textarea>
+          </div>
+          <div class="field">
+            <label>Freelancer Email or Username</label>
+            <input type="text" name="freelancer" id="freelancerInput" placeholder="demo@freelancer.com or @username" required />
+            <div class="inline-error" id="freelancerError">Freelancer not registered on Nexrow</div>
+          </div>
+        </div>
+
+        <!-- Budget & Payment Structure -->
+        <div class="form-section fade-up">
+          <div class="form-section-title">2. Payment & Milestones</div>
+          <div class="field">
+            <label>Total Payment Amount (INR)</label>
+            <div class="amount-wrap">
+              <span class="amount-prefix">₹</span>
+              <input type="number" name="amount" id="totalAmount" placeholder="50000" min="1" required />
+            </div>
+          </div>
+          <div class="field">
+            <label>Payment Type</label>
+            <select name="paymentType" id="paymentType">
+              <option value="Full Payment">Full Payment</option>
+              <option value="Milestone-based">Milestone आधारित (Milestone-based)</option>
+            </select>
+          </div>
+
+          <!-- Dynamic Milestone Section -->
+          <div id="milestoneSection" style="display: none;" class="mt-2">
+            <div class="flex-between mb-2">
+              <span class="mono gold" style="font-size: 0.68rem; letter-spacing: 0.1em;">// MILESTONE BREAKDOWN</span>
+              <button type="button" class="btn btn-outline" id="addMilestoneBtn" style="padding: 0.4rem 0.8rem; font-size: 0.65rem;">+ Add Milestone</button>
+            </div>
+            <div id="milestonesContainer"></div>
+          </div>
+        </div>
+
+        <!-- Timeline & Terms -->
+        <div class="form-section fade-up">
+          <div class="form-section-title">3. Schedule & Terms</div>
+          <div class="field">
+            <label>Deadline</label>
+            <input type="date" name="deadline" id="deadline" required />
+          </div>
+        </div>
+
+        <!-- Terms Box Checkbox -->
+        <div class="terms-box fade-up mb-3">
+          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+            <input type="checkbox" id="termsCheck" style="width: 18px; height: 18px; accent-color: var(--gold);" required />
+            <span style="font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text);">
+              I agree to Nexrow secure escrow terms and conditions
+            </span>
+          </label>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="fade-up" style="display:flex; gap:0.8rem">
+          <a href="dashboard.html?section=active-contracts" class="btn btn-outline">← Cancel</a>
+          <button type="submit" class="btn btn-gold" id="createContractBtn" style="flex:1">Create Secure Contract</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Success Modal Overlay -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal-content fade-up">
+      <button class="modal-close" id="modalCloseBtn">✕</button>
+      <div style="font-size: 3rem; margin-bottom: 0.8rem;">🎉</div>
+      <h2 style="margin-bottom: 0.3rem;">Contract Created Successfully 🚀</h2>
+      <p style="font-size: 0.82rem; color: var(--text2); margin-bottom: 1.5rem;">
+        Your escrow contract has been initialized and locked safely.
+      </p>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); padding: 1.2rem; border-radius: var(--radius); margin-bottom: 1.5rem;">
+        <div style="font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem;">
+          UNIQUE CONTRACT ID
+        </div>
+        <div style="font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 0.8rem;" id="modalContractId">
+          NX-0000000000000
+        </div>
+        <button type="button" class="btn btn-outline" id="copyIdBtn" style="padding: 0.4rem 1rem; font-size: 0.7rem;">📋 Copy ID</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+        <button type="button" class="btn btn-gold btn-full" id="shareContractBtn">Share Contract</button>
+        
+        <div class="share-options-box" id="shareOptionsBox">
+          <button type="button" class="share-btn" id="shareCopyId">
+            <span>Copy Contract ID</span>
+            <span>📋</span>
+          </button>
+          <button type="button" class="share-btn" id="shareCopyLink">
+            <span>Copy Invite Link</span>
+            <span>🔗</span>
+          </button>
+          <button type="button" class="share-btn" id="shareWhatsApp">
+            <span>Share via WhatsApp</span>
+            <span>💬</span>
+          </button>
+        </div>
+
+        <a href="live-dashboard.html" class="btn btn-outline btn-full" id="goToLiveDashboardBtn">
+          Go to Live Dashboard ⚙️ →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    // ── ROLE LOGIC GUARD ──
+    const userRole = (localStorage.getItem('role') || 'Client').trim();
+    if (userRole.toLowerCase() === 'freelancer') {
+      window.location.href = 'upload-proof.html';
+    } else if (userRole.toLowerCase() === 'admin') {
+      window.location.href = 'status.html';
+    }
+
+    let isFormDirty = false;
+
+    // Track unsaved changes
+    document.querySelectorAll('#contractForm input, #contractForm textarea, #contractForm select').forEach(el => {
+      el.addEventListener('input', () => { isFormDirty = true; });
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+      if (isFormDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    function showAlert(containerId, type, message) {
+      const icons = { error: '✕', success: '✓', info: 'ℹ', warning: '⚠' };
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = `<div class='alert alert-${type}'><span>${icons[type] || '•'}</span><span>${message}</span></div>`;
+      setTimeout(() => { el.innerHTML = ''; }, 5000);
+    }
+
+    function showInlineError(elementId, message) {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.textContent = message;
+        el.classList.add('show');
+      }
+    }
+
+    function clearInlineErrors() {
+      document.querySelectorAll('.inline-error').forEach(el => {
+        el.textContent = '';
+        el.classList.remove('show');
+      });
+    }
+
+    // Set minimum deadline date to today
+    const deadlineInput = document.getElementById('deadline');
+    if (deadlineInput) {
+      deadlineInput.min = new Date().toISOString().split('T')[0];
+    }
+
+    // ── DYNAMIC MILESTONE MANAGEMENT ──
+    const paymentTypeSelect = document.getElementById('paymentType');
+    const milestoneSection = document.getElementById('milestoneSection');
+    const milestonesContainer = document.getElementById('milestonesContainer');
+    const addMilestoneBtn = document.getElementById('addMilestoneBtn');
+    let milestoneCount = 0;
+
+    if (paymentTypeSelect) {
+      paymentTypeSelect.addEventListener('change', (e) => {
+        if (e.target.value.includes('Milestone')) {
+          milestoneSection.style.display = 'block';
+          if (milestoneCount === 0) addMilestoneField();
+        } else {
+          milestoneSection.style.display = 'none';
+        }
+      });
+    }
+
+    function addMilestoneField() {
+      milestoneCount++;
+      const card = document.createElement('div');
+      card.className = 'milestone-card fade-in';
+      card.id = `milestone-${milestoneCount}`;
+      card.innerHTML = `
+        <div class="flex-between mb-1">
+          <span class="mono gold" style="font-size: 0.65rem;">MILESTONE #${milestoneCount}</span>
+          <button type="button" style="background:none; border:none; color:var(--red); cursor:pointer; font-size:0.75rem;" onclick="removeMilestoneField(${milestoneCount})">✕ Remove</button>
+        </div>
+        <div class="field mb-1">
+          <input type="text" class="milestone-title" placeholder="Milestone Title (e.g. Design Wireframes)" required />
+        </div>
+        <div class="field mb-1">
+          <textarea class="milestone-desc" style="min-height:50px" placeholder="Milestone Deliverables..."></textarea>
+        </div>
+        <div class="field">
+          <div class="amount-wrap">
+            <span class="amount-prefix">₹</span>
+            <input type="number" class="milestone-amount" placeholder="Amount (INR)" min="1" required />
+          </div>
+        </div>
+      `;
+      milestonesContainer.appendChild(card);
+    }
+
+    window.removeMilestoneField = function(id) {
+      const card = document.getElementById(`milestone-${id}`);
+      if (card) {
+        card.remove();
+      }
+    };
+
+    if (addMilestoneBtn) {
+      addMilestoneBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        addMilestoneField();
+      });
+    }
+
+    // ── CONTRACT CREATION SUBMISSION WITH VALIDATIONS ──
+    const contractForm = document.getElementById('contractForm');
+    const createContractBtn = document.getElementById('createContractBtn');
+
+    if (contractForm) {
+      contractForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearInlineErrors();
+
+        const title = document.getElementById('contractTitle').value.trim();
+        const desc = document.getElementById('contractDesc').value.trim();
+        const freelancer = document.getElementById('freelancerInput').value.trim();
+        const amountVal = document.getElementById('totalAmount').value;
+        const amount = parseFloat(amountVal);
+        const paymentType = document.getElementById('paymentType').value;
+        const deadline = document.getElementById('deadline').value;
+        const termsChecked = document.getElementById('termsCheck').checked;
+
+        // Judge Check Validations
+        if (!title) return alert("Enter contract title");
+        if (!desc) return alert("Enter description");
+        if (!freelancer) return alert("Enter freelancer");
+        if (!amountVal || isNaN(amount) || amount <= 0) return alert("Invalid amount");
+        if (!deadline) return alert("Select deadline");
+        if (!termsChecked) return alert("Please agree to Nexrow terms and conditions");
+
+        // Fake Smart Validation for Freelancer
+        if (freelancer !== "demo@freelancer.com" && !freelancer.includes("@") && !freelancer.startsWith("@")) {
+          showInlineError('freelancerError', 'Freelancer not registered on Nexrow');
+          return;
+        }
+
+        createContractBtn.disabled = true;
+        createContractBtn.innerHTML = '<span class="spinner"></span> Creating Contract...';
+
+        // Generate contractId (simulated backend)
+        const contractId = "NX-" + Date.now();
+
+        const contractData = {
+          title,
+          description: desc,
+          freelancer,
+          amount: amountVal,
+          paymentType,
+          deadline,
+          contractId,
+          status: "Pending",
+          createdAt: new Date().toISOString()
+        };
+
+        // Save contract in localStorage
+        localStorage.setItem("contract", JSON.stringify(contractData));
+
+        // Save to nexrow_contracts list for dashboard syncing
+        const existingContracts = JSON.parse(localStorage.getItem('nexrow_contracts') || '[]');
+        existingContracts.push({
+          contract_id: contractId,
+          title,
+          description: desc,
+          freelancer_identifier: freelancer,
+          total_amount: amount,
+          payment_type: paymentType,
+          deadline,
+          contract_status: 'Pending',
+          escrow_status: 'Not Funded',
+          created_at: contractData.createdAt
+        });
+        localStorage.setItem('nexrow_contracts', JSON.stringify(existingContracts));
+
+        // Toast notification
+        showAlert('alertBox', 'success', 'Contract Created Successfully 🚀');
+
+        setTimeout(() => {
+          isFormDirty = false;
+          createContractBtn.disabled = false;
+          createContractBtn.innerHTML = 'Create Secure Contract';
+
+          // Show Success Modal
+          const successModal = document.getElementById('successModal');
+          const modalContractId = document.getElementById('modalContractId');
+          if (modalContractId) modalContractId.textContent = contractId;
+          if (successModal) successModal.classList.add('active');
+        }, 800);
+      });
+    }
+
+    // Modal Close Action -> Redirect to /live-dashboard
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const successModal = document.getElementById('successModal');
+    if (modalCloseBtn && successModal) {
+      modalCloseBtn.addEventListener('click', () => {
+        successModal.classList.remove('active');
+        window.location.href = 'live-dashboard.html';
+      });
+    }
+
+    // Copy Contract ID
+    const copyIdBtn = document.getElementById('copyIdBtn');
+    if (copyIdBtn) {
+      copyIdBtn.addEventListener('click', () => {
+        const contractId = document.getElementById('modalContractId').textContent;
+        navigator.clipboard.writeText(contractId).then(() => {
+          copyIdBtn.textContent = '✓ Copied!';
+          setTimeout(() => { copyIdBtn.textContent = '📋 Copy ID'; }, 2000);
+        });
+      });
+    }
+
+    // Share Contract Action Button
+    const shareContractBtn = document.getElementById('shareContractBtn');
+    const shareOptionsBox = document.getElementById('shareOptionsBox');
+    if (shareContractBtn && shareOptionsBox) {
+      shareContractBtn.addEventListener('click', () => {
+        shareOptionsBox.classList.toggle('active');
+      });
+    }
+
+    // Share Options Actions
+    const shareCopyId = document.getElementById('shareCopyId');
+    if (shareCopyId) {
+      shareCopyId.addEventListener('click', () => {
+        const contractId = document.getElementById('modalContractId').textContent;
+        navigator.clipboard.writeText(contractId).then(() => {
+          showAlert('alertBox', 'success', 'Contract ID copied to clipboard!');
+        });
+      });
+    }
+
+    const shareCopyLink = document.getElementById('shareCopyLink');
+    if (shareCopyLink) {
+      shareCopyLink.addEventListener('click', () => {
+        const contractId = document.getElementById('modalContractId').textContent;
+        const link = `${window.location.origin}/live-dashboard.html?id=${contractId}`;
+        navigator.clipboard.writeText(link).then(() => {
+          showAlert('alertBox', 'success', 'Invite link copied to clipboard!');
+        });
+      });
+    }
+
+    const shareWhatsApp = document.getElementById('shareWhatsApp');
+    if (shareWhatsApp) {
+      shareWhatsApp.addEventListener('click', () => {
+        const contractId = document.getElementById('modalContractId').textContent;
+        const text = encodeURIComponent(`Check out our secure Nexrow escrow contract: ${contractId}`);
+        window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+      });
+    }
+  </script>
+</body>
+
+</html>

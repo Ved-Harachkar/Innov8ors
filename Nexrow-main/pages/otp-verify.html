@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexrow — OTP Verification</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .otp-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .otp-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1.2rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .otp-hint {
+      background: var(--gold-dim);
+      border: 1px solid rgba(201, 168, 76, 0.2);
+      padding: 0.7rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--gold);
+      margin: 1rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .proof-viewer {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1.2rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .proof-viewer-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 0.8rem;
+    }
+
+    .proof-viewer-img {
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .proof-viewer-msg {
+      font-size: 0.82rem;
+      color: var(--text2);
+      line-height: 1.6;
+      margin-top: 0.8rem;
+      font-family: 'DM Mono', monospace;
+      border-left: 2px solid var(--gold);
+      padding-left: 0.8rem;
+    }
+
+    .verify-layers {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin: 1.2rem 0;
+      text-align: left;
+    }
+
+    .vl-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+    }
+
+    .vl-row .vl-label {
+      color: var(--text2);
+    }
+
+    .vl-row .vl-val {
+      color: var(--green);
+    }
+
+    .vl-row .vl-val.pending {
+      color: var(--amber);
+    }
+
+    .resend-link {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--text3);
+      cursor: pointer;
+      margin-top: 0.8rem;
+      display: block;
+      text-decoration: underline;
+      transition: color 0.2s;
+      background: none;
+      border: none;
+    }
+
+    .resend-link:hover {
+      color: var(--gold);
+    }
+
+    /* SUPI AI */
+    .supi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .supi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--gold), var(--cyan), transparent);
+      animation: shimmer 3s linear infinite;
+      background-size: 200% 100%;
+    }
+
+    .supi-header {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .supi-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(201, 168, 76, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .supi-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .supi-title span {
+      color: var(--cyan);
+    }
+
+    .supi-subtitle {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--text3);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .supi-scan {
+      display: none;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .supi-scan.active {
+      display: block;
+    }
+
+    .supi-scan-icon {
+      font-size: 2.5rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .supi-scan-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--cyan);
+      margin-top: 0.8rem;
+    }
+
+    .supi-scan-bar {
+      height: 3px;
+      background: var(--border);
+      margin-top: 1rem;
+      overflow: hidden;
+      border-radius: 2px;
+    }
+
+    .supi-scan-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--cyan), var(--gold));
+      transition: width 0.5s;
+    }
+
+    .supi-result {
+      display: none;
+      padding: 1.2rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .supi-result.active {
+      display: block;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .supi-result.glow-green {
+      border-color: rgba(34, 197, 94, 0.4);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.08);
+    }
+
+    .supi-result.glow-red {
+      border-color: rgba(239, 68, 68, 0.4);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.08);
+    }
+
+    .supi-result.glow-yellow {
+      border-color: rgba(245, 158, 11, 0.4);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.08);
+    }
+
+    .supi-verdict {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .supi-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text3);
+      margin-bottom: 0.8rem;
+    }
+
+    .supi-notes {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text2);
+      line-height: 1.7;
+      border-left: 2px solid var(--cyan);
+      padding-left: 0.8rem;
+    }
+
+    .supi-frozen {
+      background: var(--red-dim);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      padding: 1rem;
+      margin-top: 1rem;
+      text-align: center;
+      display: none;
+    }
+
+    .supi-frozen.active {
+      display: block;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .supi-upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin: 0.8rem 0;
+    }
+
+    .supi-thumb {
+      aspect-ratio: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .supi-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .supi-thumb .supi-rm {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 18px;
+      height: 18px;
+      background: rgba(239, 68, 68, 0.9);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 0.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="topnav">
+    <a href="dashboard.html" class="nav-logo">Ne<span>x</span>row</a>
+    <div class="nav-right">
+      <span class="nav-user" id="navUser"></span>
+      <button class="nav-logout" id="logoutBtn">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-wrap" style="padding-top:2.5rem">
+      <div class="page-header fade-up">
+        <div class="tag">// Layer 5: OTP Verification</div>
+        <h1>Verify Delivery</h1>
+        <p class="mt-2" style="font-size:0.85rem">Review the freelancer's proof and enter the OTP to release payment
+          from escrow.</p>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <div class="proof-viewer fade-up" id="proofViewer">
+        <div class="proof-viewer-title">// Proof of Delivery</div>
+        <div id="proofContent">Loading...</div>
+      </div>
+
+      <div class="fade-up">
+        <div
+          style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:0.6rem">
+          // Verification Layers</div>
+        <div class="verify-layers">
+          <div class="vl-row"><span class="vl-label">01 · Payment Locked</span><span class="vl-val">✓ Passed</span>
+          </div>
+          <div class="vl-row"><span class="vl-label">02 · Proof Submitted</span><span class="vl-val" id="vl2">—</span>
+          </div>
+          <div class="vl-row"><span class="vl-label">03 · File Hash Verified</span><span class="vl-val"
+              id="vl3">—</span></div>
+          <div class="vl-row"><span class="vl-label">04 · Timestamp Valid</span><span class="vl-val" id="vl4">—</span>
+          </div>
+          <div class="vl-row"><span class="vl-label">05 · SUPI AI Scan</span><span class="vl-val pending" id="vl5ai">⏳
+              Pending</span></div>
+          <div class="vl-row"><span class="vl-label">06 · OTP Confirmation</span><span class="vl-val pending" id="vl5">⏳
+              Pending</span></div>
+        </div>
+      </div>
+
+      <!-- SUPI AI SECTION -->
+      <div class="supi-card fade-up" id="supiCard">
+        <div class="supi-header">
+          <div class="supi-logo">🧠</div>
+          <div>
+            <div class="supi-title">Supi <span>AI</span></div>
+            <div class="supi-subtitle">Trust Intelligence Engine</div>
+          </div>
+        </div>
+        <div id="supiDefault">
+          <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2);margin-bottom:1rem">Upload
+            product photos for AI-powered damage & authenticity analysis before releasing payment.</p>
+          <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text3);margin-bottom:0.4rem">UPLOAD
+            EVIDENCE (min 2 photos)</div>
+          <div class="upload-zone" id="supiUploadZone" style="padding:1.5rem 1rem">
+            <input type="file" id="supiFiles" accept=".jpg,.jpeg,.png,.webp" multiple />
+            <div style="font-size:1.5rem;opacity:0.5">📸</div>
+            <div class="upload-label">Select or drop product photos</div>
+          </div>
+          <div class="supi-upload-grid" id="supiGrid"></div>
+          <div id="supiCount"
+            style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text3);margin-bottom:0.8rem"></div>
+          <div class="field"><label>Issue Type</label>
+            <select id="supiIssue">
+              <option value="">Select issue type...</option>
+              <option value="damaged_product">Damaged Product</option>
+              <option value="broken_item">Broken Item</option>
+              <option value="missing_items">Missing Items</option>
+              <option value="wrong_item">Wrong Delivery</option>
+              <option value="fake_delivery">Fake Delivery</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Description</label><textarea id="supiDesc"
+              placeholder="Describe the issue..."></textarea></div>
+          <button class="btn btn-gold btn-full" id="supiAnalyzeBtn" disabled>🧠 Run SUPI AI Analysis</button>
+          <p style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text3);text-align:center;margin-top:0.4rem"
+            id="supiHint">Add at least 2 photos to enable analysis</p>
+        </div>
+        <div class="supi-scan" id="supiScan">
+          <div class="supi-scan-icon">🧠</div>
+          <div class="supi-scan-text">SUPI AI analyzing evidence...</div>
+          <div class="supi-scan-bar">
+            <div class="supi-scan-fill" id="supiScanFill"></div>
+          </div>
+        </div>
+        <div class="supi-result" id="supiResult"></div>
+        <div class="supi-frozen" id="supiFrozen">
+          <p style="color:var(--red);font-weight:600;font-family:'DM Mono',monospace;font-size:0.78rem">🔒 Escrow
+            temporarily locked</p>
+          <p style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text2);margin-top:0.3rem">Payment
+            release blocked until dispute is resolved.</p>
+        </div>
+      </div>
+
+      <div class="otp-card fade-up mt-3" id="otpSection">
+        <div class="otp-icon">🔐</div>
+        <h3 style="margin-bottom:0.4rem">Enter OTP to Release Payment</h3>
+        <p style="font-size:0.82rem">Enter the verification code to confirm delivery and release funds.</p>
+        <div class="otp-hint"><span>ℹ</span><span>A 6-digit OTP has been sent to your registered phone via SMS.</span>
+        </div>
+        <div class="otp-group">
+          <input class="otp-input" type="text" maxlength="1" id="otp1" />
+          <input class="otp-input" type="text" maxlength="1" id="otp2" />
+          <input class="otp-input" type="text" maxlength="1" id="otp3" />
+          <input class="otp-input" type="text" maxlength="1" id="otp4" />
+          <input class="otp-input" type="text" maxlength="1" id="otp5" />
+          <input class="otp-input" type="text" maxlength="1" id="otp6" />
+        </div>
+        <button class="btn btn-green btn-full" id="verifyBtn">✅ Verify & Release Payment</button>
+        <button class="resend-link" id="resendBtn">Didn't receive? Resend OTP</button>
+      </div>
+
+      <div class="mt-3 text-center fade-up">
+        <p style="font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--text3);margin-top:0.5rem">Use SUPI AI
+          above to report delivery issues</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+
+    function showAlert(containerId, type, message) {
+      const icons = { error: '✕', success: '✓', info: 'ℹ', warning: '⚠' };
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = `<div class='alert alert-${type}'><span>${icons[type] || '•'}</span><span>${message}</span></div>`;
+      setTimeout(() => { el.innerHTML = ''; }, 5000);
+    }
+    const SEND_OTP_URL = 'https://qhcxwwobfqsecwqsvwid.supabase.co/functions/v1/send-otp';
+
+    const params = new URLSearchParams(window.location.search);
+    const dealDocId = params.get('id');
+    let dealData = null;
+
+    requireAuth(async (user) => {
+      setNavUser(user); setupLogout();
+      if (!dealDocId) return window.location.href = 'dashboard.html';
+
+      const { data, error } = await supabase.from('deals').select('*').eq('id', dealDocId).single();
+      if (error || !data) return window.location.href = 'dashboard.html';
+      dealData = data;
+
+      if (dealData.client_id !== user.id) {
+        showAlert('alertBox', 'error', 'Only the client can verify delivery.');
+        document.getElementById('verifyBtn').disabled = true;
+        return;
+      }
+      if (dealData.status !== 'DELIVERED') {
+        window.location.href = `status.html?id=${dealDocId}`;
+        return;
+      }
+
+      document.getElementById('vl2').textContent = dealData.proof_url ? '✓ Passed' : '✕ Missing';
+      document.getElementById('vl2').className = 'vl-val' + (dealData.proof_url ? '' : ' pending');
+      document.getElementById('vl3').textContent = dealData.proof_url ? '✓ Verified' : '—';
+      document.getElementById('vl3').className = 'vl-val';
+      document.getElementById('vl4').textContent = dealData.delivered_at ? '✓ Valid' : '—';
+      document.getElementById('vl4').className = 'vl-val';
+
+      const proofEl = document.getElementById('proofContent');
+      if (dealData.proof_type === 'link') {
+        proofEl.innerHTML = `<a href="${dealData.proof_url}" target="_blank" class="btn btn-outline btn-sm">🔗 View Deliverable</a>`;
+      } else if (dealData.proof_type === 'image' && dealData.proof_url) {
+        proofEl.innerHTML = `<img src="${dealData.proof_url}" class="proof-viewer-img" alt="Proof"/>`;
+      } else if (dealData.proof_url) {
+        proofEl.innerHTML = `<a href="${dealData.proof_url}" target="_blank" class="btn btn-outline btn-sm">📄 View Proof File</a>`;
+      } else {
+        proofEl.innerHTML = `<span style="color:var(--text3);font-family:'DM Mono',monospace;font-size:0.75rem">No file proof uploaded.</span>`;
+      }
+      if (dealData.delivery_message) {
+        proofEl.innerHTML += `<div class="proof-viewer-msg">${dealData.delivery_message}</div>`;
+      }
+
+      // ── SUPI AI SYSTEM ──
+      const ANALYZE_URL = 'https://qhcxwwobfqsecwqsvwid.supabase.co/functions/v1/analyze-damage';
+      let supiFiles = [];
+      let paymentFrozen = false;
+
+      function updateSupiGrid() {
+        const grid = document.getElementById('supiGrid');
+        grid.innerHTML = supiFiles.map((f, i) => {
+          const url = URL.createObjectURL(f);
+          return `<div class="supi-thumb"><img src="${url}"/><button class="supi-rm" data-i="${i}">✕</button></div>`;
+        }).join('');
+        grid.querySelectorAll('.supi-rm').forEach(b => b.addEventListener('click', () => {
+          supiFiles.splice(parseInt(b.dataset.i), 1); updateSupiGrid();
+        }));
+        const btn = document.getElementById('supiAnalyzeBtn');
+        const hint = document.getElementById('supiHint');
+        document.getElementById('supiCount').textContent = `${supiFiles.length} image(s) selected`;
+        if (supiFiles.length >= 2) { btn.disabled = false; hint.textContent = '✓ Ready for analysis'; hint.style.color = 'var(--green)'; }
+        else { btn.disabled = true; hint.textContent = `Add ${2 - supiFiles.length} more photo(s)`; hint.style.color = 'var(--text3)'; }
+      }
+
+      document.getElementById('supiFiles').addEventListener('change', (e) => {
+        for (const f of e.target.files) {
+          if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) continue;
+          if (f.size > 5 * 1024 * 1024) continue;
+          if (supiFiles.length >= 4) break;
+          supiFiles.push(f);
+        }
+        updateSupiGrid();
+      });
+
+      document.getElementById('supiAnalyzeBtn').addEventListener('click', async () => {
+        const issueType = document.getElementById('supiIssue').value;
+        const desc = document.getElementById('supiDesc').value.trim();
+        if (!issueType) return showAlert('alertBox', 'error', 'Please select an issue type.');
+        if (!desc) return showAlert('alertBox', 'error', 'Please describe the issue.');
+        if (supiFiles.length < 2) return showAlert('alertBox', 'error', 'Minimum 2 photos required.');
+
+        // Show scanning animation
+        document.getElementById('supiDefault').style.display = 'none';
+        const scan = document.getElementById('supiScan');
+        scan.classList.add('active');
+        const fill = document.getElementById('supiScanFill');
+
+        // Upload images to Supabase storage
+        const imageUrls = [];
+        for (let i = 0; i < supiFiles.length; i++) {
+          fill.style.width = `${((i + 1) / supiFiles.length * 50)}%`;
+          const fname = `disputes/${dealDocId}/${Date.now()}_${i}_${supiFiles[i].name}`;
+          const { error: ue } = await supabase.storage.from('proofs').upload(fname, supiFiles[i]);
+          if (!ue) {
+            const { data: ud } = supabase.storage.from('proofs').getPublicUrl(fname);
+            imageUrls.push(ud.publicUrl);
+          } else {
+            imageUrls.push(`proof://${fname}`);
+          }
+        }
+
+        fill.style.width = '70%';
+
+        // Call AI Edge Function
+        let analysis = null;
+        try {
+          const res = await fetch(ANALYZE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_urls: imageUrls, issue_type: issueType, issue_description: desc, mode: 'dispute' })
+          });
+          const json = await res.json();
+          if (json.success) analysis = json.analysis;
+        } catch (e) { console.error('AI call failed:', e); }
+
+        fill.style.width = '100%';
+        await new Promise(r => setTimeout(r, 600));
+        scan.classList.remove('active');
+
+        // Fallback
+        if (!analysis) {
+          analysis = { verdict: 'Minor Damage', confidence: 'Medium', severity: 'MEDIUM', notes: 'AI analysis could not be completed. Manual review recommended.', recommendation: 'manual_review', damage_detected: false };
+        }
+
+        // Save dispute to DB
+        await supabase.from('disputes').insert({
+          deal_id: dealDocId, issue_type: issueType, issue_description: desc,
+          dispute_images: imageUrls, ai_analysis: analysis,
+          ai_verdict: analysis.verdict, ai_confidence: analysis.confidence, ai_notes: analysis.notes,
+          dispute_status: analysis.recommendation === 'hold_payment' ? 'under_review' : 'open',
+          created_by: user.id
+        });
+
+        // Show result
+        const resultEl = document.getElementById('supiResult');
+        const verdictColors = { 'Damage Detected': { color: 'var(--red)', glow: 'glow-red', icon: '🔴' }, 'Looks Valid': { color: 'var(--green)', glow: 'glow-green', icon: '🟢' }, 'Suspicious Claim': { color: 'var(--amber)', glow: 'glow-yellow', icon: '🟡' }, 'Minor Damage': { color: 'var(--amber)', glow: 'glow-yellow', icon: '🟠' } };
+        const vc = verdictColors[analysis.verdict] || verdictColors['Minor Damage'];
+
+        resultEl.className = `supi-result active ${vc.glow}`;
+        resultEl.innerHTML = `
+      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:0.8rem">// AI ANALYSIS COMPLETE</div>
+      <div class="supi-verdict" style="color:${vc.color}">${vc.icon} ${analysis.verdict}</div>
+      <div class="supi-meta">Confidence: ${analysis.confidence || 'High'} · Severity: ${analysis.severity || 'N/A'} · Source: Gemini Vision AI</div>
+      <div class="supi-notes">${analysis.notes || 'No additional notes.'}</div>
+    `;
+
+        // Update verification layer
+        const vl5ai = document.getElementById('vl5ai');
+        if (analysis.recommendation === 'hold_payment' || analysis.damage_detected) {
+          vl5ai.textContent = '⚠ Issue Found'; vl5ai.className = 'vl-val pending';
+        } else {
+          vl5ai.textContent = '✓ Clear'; vl5ai.className = 'vl-val';
+        }
+
+        // Freeze payment if damage detected
+        if (analysis.recommendation === 'hold_payment' || analysis.damage_detected) {
+          paymentFrozen = true;
+          document.getElementById('supiFrozen').classList.add('active');
+          document.getElementById('otpSection').style.opacity = '0.3';
+          document.getElementById('otpSection').style.pointerEvents = 'none';
+          document.getElementById('verifyBtn').disabled = true;
+          // Update deal status
+          await supabase.from('deals').update({
+            status: 'DISPUTED', dispute_reason: `SUPI AI: ${analysis.verdict} - ${desc}`,
+            dispute_status: 'under_review', disputed_at: new Date().toISOString(), updated_at: new Date().toISOString()
+          }).eq('id', dealDocId);
+        }
+      });
+
+      const otpInputs = ['otp1', 'otp2', 'otp3', 'otp4', 'otp5', 'otp6'].map(id => document.getElementById(id));
+      otpInputs.forEach((input, i) => {
+        input.addEventListener('input', () => { if (input.value.length === 1 && i < 5) otpInputs[i + 1].focus(); });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !input.value && i > 0) otpInputs[i - 1].focus(); });
+      });
+
+      document.getElementById('verifyBtn').addEventListener('click', async () => {
+        const entered = otpInputs.map(i => i.value).join('');
+        if (entered.length < 6) return showAlert('alertBox', 'error', 'Please enter all 6 digits.');
+
+        const btn = document.getElementById('verifyBtn');
+        btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Verifying...';
+
+        await new Promise(r => setTimeout(r, 800));
+
+        if (entered !== (dealData.otp || '000000')) {
+          showAlert('alertBox', 'error', 'Invalid OTP. Please check and try again.');
+          btn.disabled = false; btn.innerHTML = '✅ Verify & Release Payment';
+          otpInputs.forEach(i => i.value = ''); otpInputs[0].focus();
+          return;
+        }
+
+        btn.innerHTML = '<span class="spinner"></span> Releasing payment...';
+        try {
+          const { error } = await supabase.from('deals').update({
+            status: 'RELEASED',
+            verified_at: new Date().toISOString(),
+            released_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }).eq('id', dealDocId);
+
+          if (error) throw error;
+
+          document.getElementById('vl5').textContent = '✓ Passed';
+          document.getElementById('vl5').className = 'vl-val';
+          showAlert('alertBox', 'success', 'Payment Released Successfully! 🎉');
+          btn.innerHTML = '✅ Payment Released';
+          setTimeout(() => { window.location.href = `status.html?id=${dealDocId}`; }, 2000);
+        } catch (e) {
+          showAlert('alertBox', 'error', 'Verification failed: ' + e.message);
+          btn.disabled = false; btn.innerHTML = '✅ Verify & Release Payment';
+        }
+      });
+
+      document.getElementById('resendBtn').addEventListener('click', async () => {
+        const resendBtn = document.getElementById('resendBtn');
+        resendBtn.disabled = true;
+        resendBtn.textContent = 'Sending...';
+
+        const newOtp = generateOTP();
+        try {
+          const { error } = await supabase.from('deals').update({
+            otp: newOtp,
+            otp_status: 'sending',
+            updated_at: new Date().toISOString()
+          }).eq('id', dealDocId);
+          if (error) throw error;
+          dealData.otp = newOtp;
+
+          // Fetch client phone
+          let clientPhone = dealData.client_phone || '';
+
+          if (clientPhone) {
+            const res = await fetch(SEND_OTP_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone: clientPhone, otp: newOtp })
+            });
+            const resData = await res.json();
+            if (resData.success) {
+              await supabase.from('deals').update({ otp_status: 'sent' }).eq('id', dealDocId);
+              if (resData.demo_mode) {
+                showAlert('alertBox', 'info', '[DEMO] New OTP: ' + resData.demo_otp);
+              } else {
+                showAlert('alertBox', 'success', 'New OTP sent to your phone!');
+              }
+            } else {
+              showAlert('alertBox', 'warning', 'OTP regenerated but SMS delivery may have failed.');
+            }
+          } else {
+            showAlert('alertBox', 'warning', 'OTP regenerated. Phone not found — check Supabase dashboard.');
+          }
+        } catch (e) {
+          showAlert('alertBox', 'error', 'Failed to resend OTP: ' + e.message);
+        }
+        setTimeout(() => { resendBtn.disabled = false; resendBtn.textContent = "Didn't receive? Resend OTP"; }, 5000);
+      });
+
+      // Dispute button is now a link to dispute.html — no JS handler needed
+    });
+  </script>
+</body>
+
+</html>

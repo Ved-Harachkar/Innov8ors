@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexrow — Deal Workspace</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .status-hero {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold));
+    }
+
+    .status-amount {
+      font-family: 'Syne', sans-serif;
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--gold);
+      line-height: 1;
+      margin: 0.8rem 0;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    .sg-cell {
+      background: var(--card);
+      padding: 1rem 1.2rem;
+    }
+
+    .sg-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 0.3rem;
+    }
+
+    .sg-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+
+    .timeline-wrap {
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .released-banner {
+      background: var(--green-dim);
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      padding: 2rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .actions-area {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .dispute-banner {
+      background: var(--red-dim);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      padding: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .dispute-banner p {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+    }
+
+    .waiting-banner {
+      background: var(--gold-dim);
+      border: 1px solid rgba(201, 168, 76, 0.25);
+      padding: 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .waiting-code {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      margin: 0.8rem 0;
+    }
+
+    /* DELIVERY AI */
+    .dai-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 1.2rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dai-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #22c55e, #38bdf8, #22c55e, transparent);
+      animation: shimmer 3s linear infinite;
+      background-size: 200% 100%;
+    }
+
+    .dai-header {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .dai-logo {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(56, 189, 248, 0.15));
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+    }
+
+    .dai-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .dai-title span {
+      color: #22c55e;
+    }
+
+    .dai-body {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text2);
+      line-height: 1.7;
+      border-left: 2px solid #22c55e;
+      padding-left: 0.8rem;
+    }
+
+    .dai-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.58rem;
+      color: var(--text3);
+      margin-top: 0.6rem;
+    }
+
+    .dai-loading {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: #22c55e;
+    }
+
+    @keyframes typewriter {
+      from {
+        width: 0;
+      }
+
+      to {
+        width: 100%;
+      }
+    }
+
+    .dai-typed {
+      overflow: hidden;
+      white-space: nowrap;
+      animation: typewriter 1.2s steps(40) 0.3s both;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="topnav">
+    <a href="dashboard.html" class="nav-logo">Ne<span>x</span>row</a>
+    <div class="nav-right">
+      <span class="nav-user" id="navUser"></span>
+      <button class="nav-logout" id="logoutBtn">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-wrap" style="padding-top:2.5rem;max-width:580px">
+      <div style="margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem">
+        <a href="javascript:history.back()"
+          style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text3);text-decoration:none">← Back</a>
+        <div class="tag"
+          style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold)">
+          // Deal Workspace</div>
+      </div>
+      <div id="alertBox"></div>
+      <div id="loading" class="flex-center" style="padding:4rem">
+        <div class="spinner"></div>
+      </div>
+      <div id="content" style="display:none"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+
+    const STATUS = {
+      WAITING_FOR_CLIENT: { label: 'Waiting for Client', badge: 'badge-muted' },
+      CLIENT_JOINED: { label: 'Client Joined', badge: 'badge-cyan' },
+      PENDING: { label: 'Pending Payment', badge: 'badge-muted' },
+      LOCKED: { label: 'Payment Locked', badge: 'badge-gold' },
+      DELIVERED: { label: 'Delivered', badge: 'badge-cyan' },
+      VERIFYING: { label: 'Verifying', badge: 'badge-amber' },
+      RELEASED: { label: 'Payment Released', badge: 'badge-green' },
+      DISPUTED: { label: 'Disputed', badge: 'badge-red' },
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const dealDocId = params.get('id');
+    let currentUser = null;
+
+    requireAuth(async (user) => {
+      currentUser = user;
+      setNavUser(user);
+      setupLogout();
+
+      if (!dealDocId) return window.location.href = 'dashboard.html';
+
+      await loadDeal(user);
+    });
+
+    async function loadDeal(user) {
+      const { data: d, error } = await supabase.from('deals').select('*').eq('id', dealDocId).single();
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+
+      if (error || !d) {
+        document.getElementById('content').innerHTML = `<div class="alert alert-error">Deal not found.</div>`;
+        return;
+      }
+
+      renderDeal(d, user);
+    }
+
+    function renderDeal(d, user) {
+      const isFreelancer = d.freelancer_id === user.id;
+      const isClient = d.client_id === user.id;
+      const s = STATUS[d.status] || STATUS.PENDING;
+      const content = document.getElementById('content');
+      const amount = d.budget || 0;
+
+      let waitingBanner = '';
+      if (d.status === 'WAITING_FOR_CLIENT' && isFreelancer) {
+        waitingBanner = `<div class="waiting-banner fade-up"><div style="font-size:1.5rem;margin-bottom:0.5rem">⏳</div><h3 style="margin-bottom:0.3rem">Waiting for Client</h3><p style="font-size:0.82rem">Share this code with your client:</p><div class="waiting-code">${d.unique_code || '—'}</div><button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText('${d.unique_code}').then(()=>this.textContent='✓ Copied!')">📋 Copy Code</button></div>`;
+      }
+
+      const steps = [
+        { label: 'Deal Created', desc: `By ${isFreelancer ? 'You (Freelancer)' : d.freelancer_name || d.freelancer_email}`, time: formatDate(d.created_at), done: true },
+        { label: 'Client Joined', desc: d.client_email ? `${d.client_email}` : 'Waiting for client to join with code...', time: d.client_joined_at ? formatDate(d.client_joined_at) : null, done: !['WAITING_FOR_CLIENT'].includes(d.status) },
+        { label: 'Payment Locked', desc: formatINR(amount) + ' held in escrow', time: d.payment_locked_at ? formatDate(d.payment_locked_at) : null, done: ['LOCKED', 'DELIVERED', 'VERIFYING', 'RELEASED', 'DISPUTED'].includes(d.status) },
+        { label: 'Proof Delivered', desc: d.proof_type ? `Via ${d.proof_type}` : 'Waiting for freelancer...', time: d.delivered_at ? formatDate(d.delivered_at) : null, done: ['DELIVERED', 'VERIFYING', 'RELEASED'].includes(d.status) },
+        { label: 'OTP Verified', desc: 'Client confirmed delivery', time: d.verified_at ? formatDate(d.verified_at) : null, done: d.status === 'RELEASED' },
+        { label: 'Payment Released', desc: `To ${d.freelancer_email || '—'}`, time: d.released_at ? formatDate(d.released_at) : null, done: d.status === 'RELEASED' }
+      ];
+
+      const timelineHTML = steps.map((step, i) => {
+        const isDone = step.done;
+        const isActive = !step.done && (i === 0 || steps[i - 1].done);
+        const dotClass = isDone ? 'tl-dot-done' : (isActive ? 'tl-dot-active' : 'tl-dot-pending');
+        const icon = isDone ? '✓' : (isActive ? '●' : String(i + 1));
+        return `<div class="tl-step"><div class="tl-dot ${dotClass}">${icon}</div><div class="tl-content"><h4>${step.label}</h4><p>${step.desc}</p>${step.time ? `<p style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text3);margin-top:0.2rem">${step.time}</p>` : ''}</div></div>`;
+      }).join('');
+
+      let actionsHTML = '';
+      if (isFreelancer) {
+        if (d.status === 'CLIENT_JOINED' || d.status === 'PENDING') actionsHTML = `<p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2)">⏳ Waiting for client to lock payment in escrow...</p>`;
+        if (d.status === 'LOCKED') actionsHTML = `<a href="upload-proof.html?id=${dealDocId}" class="btn btn-gold">📦 Upload Proof of Delivery</a>`;
+        if (d.status === 'DELIVERED') actionsHTML = `<p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2)">⏳ Waiting for client to verify OTP and release payment...</p>`;
+        if (d.status === 'DISPUTED') actionsHTML = `<a href="dispute.html?id=${dealDocId}" class="btn btn-gold">📋 View Dispute & Respond</a>`;
+      }
+      if (isClient) {
+        if (d.status === 'CLIENT_JOINED') actionsHTML = `<a href="payment.html?id=${dealDocId}" class="btn btn-gold">💳 Lock Payment in Escrow</a>`;
+        if (d.status === 'PENDING') actionsHTML = `<a href="payment.html?id=${dealDocId}" class="btn btn-gold">💳 Make Payment</a>`;
+        if (d.status === 'LOCKED') actionsHTML = `<p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2)">⏳ Waiting for freelancer to deliver and upload proof...</p>`;
+        if (d.status === 'DELIVERED') actionsHTML = `<a href="otp-verify.html?id=${dealDocId}" class="btn btn-green">🔐 Verify & Release Payment</a><a href="dispute.html?id=${dealDocId}&action=raise" class="btn btn-danger btn-sm" style="margin-top:0.5rem">⚠ Report Issue</a>`;
+        if (d.status === 'DISPUTED') actionsHTML = `<a href="dispute.html?id=${dealDocId}" class="btn btn-gold">📋 View Dispute Status</a>`;
+      }
+
+      const releasedBanner = d.status === 'RELEASED' ? `<div class="released-banner fade-in"><div class="success-check">✅</div><h2 style="margin-bottom:0.5rem">Payment Released!</h2><p style="font-size:0.9rem">${formatINR(amount)} has been released to <strong>${d.freelancer_email}</strong></p><p style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--text3);margin-top:0.5rem">Transaction completed · ${formatDate(d.released_at)}</p></div>` : '';
+      const disputeBanner = d.status === 'DISPUTED' ? `<div class="dispute-banner"><p style="color:var(--red);font-weight:600;margin-bottom:0.3rem">⚠ Dispute Active</p><p>${d.dispute_reason || 'A dispute has been filed for this deal.'}</p><p style="color:var(--text3);margin-top:0.5rem;font-size:0.7rem">Funds remain locked until dispute is resolved.</p><a href="dispute.html?id=${dealDocId}" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--gold);margin-top:0.5rem;display:inline-block">View Dispute Details →</a></div>` : '';
+
+      content.innerHTML = `
+    ${waitingBanner}${releasedBanner}${disputeBanner}
+    <div class="status-hero fade-up">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase">${d.unique_code || d.deal_id || dealDocId}</div><h2 style="margin:0.4rem 0">${esc(d.title)}</h2></div>
+        <span class="badge ${s.badge}">${s.label}</span>
+      </div>
+      <div class="status-amount">${formatINR(amount)}</div>
+      <p style="font-size:0.82rem;color:var(--text2)">${esc(d.description || '')}</p>
+    </div>
+    <div class="status-grid fade-up">
+      <div class="sg-cell"><div class="sg-label">Freelancer</div><div class="sg-val">${esc(d.freelancer_name || d.freelancer_email || '—')}</div></div>
+      <div class="sg-cell"><div class="sg-label">Client</div><div class="sg-val">${d.client_email ? esc(d.client_email) : 'Not yet joined'}</div></div>
+      <div class="sg-cell"><div class="sg-label">Deadline</div><div class="sg-val">${d.deadline || '—'}</div></div>
+      <div class="sg-cell"><div class="sg-label">Your Role</div><div class="sg-val">${isFreelancer ? '🛠 Freelancer' : isClient ? '👤 Client' : 'Observer'}</div></div>
+    </div>
+    <div style="border:1px solid var(--border);background:var(--card);padding:1.2rem;margin-bottom:1.5rem" class="fade-up">
+      <div class="card-title" style="margin-bottom:0.8rem">Payment Status</div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+        <span class="badge ${['LOCKED', 'DELIVERED', 'VERIFYING', 'RELEASED'].includes(d.status) ? 'badge-gold' : 'badge-muted'}">${['LOCKED', 'DELIVERED', 'VERIFYING', 'RELEASED'].includes(d.status) ? 'Payment Locked' : 'Payment Pending'}</span>
+        ${d.status === 'RELEASED' ? '<span class="badge badge-green">Payment Released</span>' : ''}
+        ${d.status === 'DELIVERED' ? '<span class="badge badge-cyan">Delivery Uploaded</span>' : ''}
+      </div>
+    </div>
+    <div class="timeline-wrap fade-up"><div class="card-title" style="margin-bottom:1.2rem">Transaction Timeline</div><div class="timeline">${timelineHTML}</div></div>
+    <div id="deliveryAiSlot" class="fade-up"></div>
+    <div class="actions-area fade-up">${actionsHTML}</div>
+  `;
+
+      // ── DELIVERY AI ──
+      if (['DELIVERED', 'RELEASED', 'DISPUTED'].includes(d.status) && d.proof_url) {
+        const daiSlot = document.getElementById('deliveryAiSlot');
+        daiSlot.innerHTML = `<div class="dai-card"><div class="dai-header"><div class="dai-logo">🤖</div><div><div class="dai-title">Delivery <span>AI</span></div></div></div><div class="dai-body dai-loading">⏳ Analyzing delivery proof...</div></div>`;
+
+        // Collect all proof URLs
+        const proofUrls = [d.proof_url];
+        try {
+          const { data: extraProofs } = await supabase.from('proof_uploads').select('image_url').eq('deal_id', dealDocId).eq('upload_type', 'delivery_proof');
+          if (extraProofs) extraProofs.forEach(p => { if (p.image_url && !proofUrls.includes(p.image_url)) proofUrls.push(p.image_url); });
+        } catch (e) { }
+
+        try {
+          const res = await fetch('https://qhcxwwobfqsecwqsvwid.supabase.co/functions/v1/analyze-damage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_urls: proofUrls, mode: 'delivery_summary' })
+          });
+          const json = await res.json();
+          const a = json.success ? json.analysis : { summary: `${proofUrls.length} proof image(s) uploaded. AI analysis unavailable.`, packaging_status: 'unknown', confidence: 'low', risk_level: 'low' };
+          const statusColors = { intact: '#22c55e', minor_damage: '#f59e0b', damaged: '#ef4444', suspicious: '#ef4444', unknown: 'var(--text3)' };
+          const sc = statusColors[a.packaging_status] || '#22c55e';
+          daiSlot.innerHTML = `<div class="dai-card"><div class="dai-header"><div class="dai-logo">🤖</div><div><div class="dai-title">Delivery <span>AI</span></div></div><span class="badge" style="margin-left:auto;font-size:0.55rem;border-color:${sc};color:${sc}">${(a.packaging_status || 'analyzed').toUpperCase()}</span></div><div class="dai-body"><span class="dai-typed">${esc(a.summary)}</span></div><div class="dai-meta">Confidence: ${a.confidence || 'high'} · Risk: ${a.risk_level || 'low'} · Source: ${json.source || 'Gemini AI'}</div></div>`;
+        } catch (e) {
+          daiSlot.innerHTML = `<div class="dai-card"><div class="dai-header"><div class="dai-logo">🤖</div><div><div class="dai-title">Delivery <span>AI</span></div></div></div><div class="dai-body">Delivery proof uploaded. AI summary unavailable.</div></div>`;
+        }
+      }
+    }
+
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  </script>
+</body>
+
+</html>

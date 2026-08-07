@@ -1,0 +1,250 @@
+import React, { useState, useEffect, useRef } from 'react';
+
+/**
+ * LiveDashboard Component
+ * Real-time visualization of contract execution, AI steps, cost tracking, system logs, and redirection to Proceed to Submission
+ */
+export default function LiveDashboard({ onProceed }) {
+  // Fetch contract data from localStorage
+  const [contract, setContract] = useState(null);
+  const [step, setStep] = useState(0);
+  const [cost, setCost] = useState(0);
+  const [logs, setLogs] = useState([]);
+  const logsEndRef = useRef(null);
+
+  const stepsList = [
+    { label: "Contract Created", icon: "✔", desc: "Contract initialized and stored in system." },
+    { label: "AI Verifying Requirements", icon: "⚙️", desc: "AI agent reviewing scope, deliverables, and rules." },
+    { label: "Assigning Freelancer", icon: "⏳", desc: "Locking funds in escrow vault and notifying provider." },
+    { label: "Waiting for Submission", icon: "⏳", desc: "Escrow active. System awaiting proof upload." }
+  ];
+
+  // 1. Data Source Loading
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("contract");
+      if (stored) {
+        setContract(JSON.parse(stored));
+      } else {
+        // Fallback default contract for demo
+        setContract({
+          contractId: "NX-" + Date.now(),
+          title: "Full-Stack Web App Escrow",
+          freelancer: "demo@freelancer.com",
+          amount: 50000,
+          status: "Pending"
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to load contract from localStorage", e);
+    }
+  }, []);
+
+  // 2. Live Execution Flow Step Timer (Auto update every 3s)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep((prev) => (prev < 3 ? prev + 1 : prev));
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 3. Dynamic Cost Tracker 💰 (Increments +500 every 2s)
+  useEffect(() => {
+    const targetBudget = Number(contract?.amount || contract?.budget || 50000);
+    const timer = setInterval(() => {
+      setCost((prev) => {
+        if (prev + 500 <= targetBudget) return prev + 500;
+        return targetBudget;
+      });
+    }, 2000);
+
+    return () => clearInterval(timer);
+  }, [contract]);
+
+  // 4. Dynamic System Logs Push (🔥 System Logs Panel)
+  useEffect(() => {
+    const getTime = () => new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const logSequence = [
+      `[${getTime()}] Contract initialized with ID: ${contract?.contractId || 'NX-DEMO'}`,
+      `[${getTime()}] AI validation started. Parsing rules & deliverable constraints.`,
+      `[${getTime()}] Freelancer assigned: ${contract?.freelancer || 'demo@freelancer.com'}. Vault locked.`,
+      `[${getTime()}] Escrow active. System awaiting deliverable submission from provider.`
+    ];
+
+    if (logs.length < step + 1 && logSequence[step]) {
+      setLogs((prev) => [...prev, logSequence[step]]);
+    }
+  }, [step, contract]);
+
+  // Auto scroll logs
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  // 5. Proceed to Submission Action
+  const handleProceed = () => {
+    const isRoot = typeof window !== 'undefined' && !window.location.pathname.includes('/pages/');
+    const targetUrl = isRoot ? 'pages/upload-proof.html' : 'upload-proof.html';
+
+    if (onProceed) {
+      onProceed(targetUrl);
+    } else if (typeof window !== 'undefined') {
+      window.location.href = targetUrl;
+    }
+  };
+
+  return (
+    <div className="container">
+      <div className="page-wrap" style={{ maxWidth: '760px', paddingTop: '2.5rem', paddingBottom: '4rem' }}>
+        
+        {/* Page Header */}
+        <div className="flex-between mb-3 fade-up">
+          <div>
+            <div className="tag">// SYSTEM EXECUTION VIEW</div>
+            <h1 style={{ fontSize: '1.8rem', marginTop: '0.2rem' }}>Live Escrow Dashboard</h1>
+          </div>
+          <div className="status-badge-pulse" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.8rem', borderRadius: '9999px', background: 'var(--amber-dim)', border: '1px solid rgba(245, 158, 11, 0.3)', color: 'var(--amber)', fontFamily: "'DM Mono', monospace", fontSize: '0.75rem' }}>
+            <span style={{ width: '8px', height: '8px', background: 'var(--amber)', borderRadius: '50%', display: 'inline-block' }}></span>
+            <span>{step === 3 ? 'Escrow Active 💰' : 'Task Running ⚙️'}</span>
+          </div>
+        </div>
+
+        {/* 1️⃣ CONTRACT SUMMARY (TOP CARD) */}
+        <div className="card fade-up mb-3" style={{ background: 'var(--card)', border: '1px solid var(--border)', padding: '1.8rem' }}>
+          <div className="flex-between mb-2">
+            <span className="mono gold" style={{ fontSize: '0.72rem', letterSpacing: '0.1em' }}>
+              CONTRACT ID: {contract?.contractId || 'NX-DEMO'}
+            </span>
+            <span className="badge badge-amber">
+              Status: {step === 3 ? 'Active Escrow' : (contract?.status || 'Pending')}
+            </span>
+          </div>
+
+          <h2 style={{ fontSize: '1.4rem', marginBottom: '0.4rem' }}>
+            {contract?.title || 'Secure Escrow Contract'}
+          </h2>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text2)', marginBottom: '1.5rem' }}>
+            {contract?.description || 'Escrow contract execution in progress.'}
+          </p>
+
+          <div className="stat-row" style={{ margin: 0 }}>
+            <div className="stat-box">
+              <div className="stat-box-num" style={{ color: 'var(--gold)' }}>
+                ₹ {cost.toLocaleString('en-IN')}
+              </div>
+              <div className="stat-box-label">Escrow Locked 💰</div>
+            </div>
+            <div className="stat-box">
+              <div className="stat-box-num" style={{ fontSize: '1.2rem' }}>
+                {contract?.freelancer || 'demo@freelancer.com'}
+              </div>
+              <div className="stat-box-label">Assigned Freelancer</div>
+            </div>
+            <div className="stat-box">
+              <div className="stat-box-num" style={{ fontSize: '1.2rem' }}>
+                {contract?.deadline || '7 Days'}
+              </div>
+              <div className="stat-box-label">Target Deadline</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2️⃣ LIVE EXECUTION FLOW ⚙️ */}
+        <div className="card fade-up mb-3" style={{ background: 'var(--card)', border: '1px solid var(--border)', padding: '1.8rem' }}>
+          <div className="card-title">// LIVE EXECUTION FLOW ⚙️</div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {stepsList.map((st, idx) => {
+              const isCompleted = idx < step;
+              const isCurrent = idx === step;
+
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.2rem',
+                    background: isCurrent ? 'var(--gold-dim)' : 'var(--surface)',
+                    border: `1px solid ${isCurrent ? 'var(--gold)' : (isCompleted ? 'rgba(34,197,94,0.3)' : 'var(--border)')}`,
+                    borderRadius: 'var(--radius)',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: isCompleted ? 'var(--green-dim)' : (isCurrent ? 'var(--gold)' : 'var(--card)'),
+                      color: isCompleted ? 'var(--green)' : (isCurrent ? '#000' : 'var(--text3)'),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {isCompleted ? '✔' : (isCurrent ? '⚙️' : '⏳')}
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.95rem', fontWeight: isCurrent ? '700' : '500', color: isCurrent ? 'var(--gold)' : 'var(--text)' }}>
+                      [{isCompleted ? '✔' : (isCurrent ? '⚙️' : '⏳')}] {st.label}
+                    </div>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.72rem', color: 'var(--text2)', marginTop: '0.2rem' }}>
+                      {st.desc}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3️⃣ & 4️⃣ SYSTEM LOGS PANEL (🔥 SCROLLABLE LOGS) */}
+        <div className="card fade-up mb-3" style={{ background: 'var(--card)', border: '1px solid var(--border)', padding: '1.8rem' }}>
+          <div className="card-title">// SYSTEM LOGS PANEL 🔥</div>
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              padding: '1.2rem',
+              fontFamily: "'DM Mono', monospace",
+              fontSize: '0.75rem',
+              color: 'var(--text2)',
+              maxHeight: '220px',
+              overflowY: 'auto',
+              borderRadius: 'var(--radius)'
+            }}
+          >
+            {logs.map((log, index) => (
+              <div key={index} style={{ marginBottom: '0.5rem', color: index === logs.length - 1 ? 'var(--gold)' : 'var(--text)' }}>
+                {log}
+              </div>
+            ))}
+            <div ref={logsEndRef} />
+          </div>
+        </div>
+
+        {/* 5️⃣ ACTION BUTTON: Proceed to Submission */}
+        <div className="fade-up">
+          <button
+            type="button"
+            className="btn btn-gold btn-full"
+            onClick={handleProceed}
+            style={{ fontSize: '0.85rem', padding: '1rem 2rem' }}
+          >
+            Proceed to Submission →
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}

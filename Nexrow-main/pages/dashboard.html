@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Nexrow — Dashboard</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<style>
+  .dash-header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2.5rem; }
+  .dash-greeting { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .dash-title { font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: 0.4rem; }
+  .dash-role { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text2); }
+  .deals-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+  .deals-header h3 { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text2); }
+  .deals-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .tabs-row { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .tab-btn { padding: 0.7rem 1.4rem; font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; background: none; border: none; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; margin-bottom: -1px; }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .deals-panel { display: none; }
+  .deals-panel.active { display: block; }
+  .deal-code-badge { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(201,168,76,0.25); padding: 0.2rem 0.5rem; letter-spacing: 0.08em; }
+  
+  .freelancer-contract-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="dashboard.html" class="nav-logo">Ne<span>x</span>row</a>
+  <div class="nav-right">
+    <span class="nav-user" id="navUser"></span>
+    <button class="nav-logout" id="logoutBtn">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="dash-header fade-up">
+    <div class="dash-greeting">// Welcome back</div>
+    <h1 class="dash-title" id="dashTitle">Freelancer Dashboard</h1>
+    <span class="dash-role" id="userRole"></span>
+  </div>
+
+  <div class="stat-row fade-up" id="statsRow">
+    <div class="stat-box"><div class="stat-box-num" id="statTotal">—</div><div class="stat-box-label">Total Deals</div></div>
+    <div class="stat-box"><div class="stat-box-num" id="statLocked">—</div><div class="stat-box-label">Active</div></div>
+    <div class="stat-box"><div class="stat-box-num" id="statReleased">—</div><div class="stat-box-label">Released</div></div>
+  </div>
+
+  <!-- Featured Active Contract Container for Freelancer -->
+  <div id="freelancerContractContainer"></div>
+
+  <div class="fade-up">
+    <div class="deals-header">
+      <h3>// Your Deals</h3>
+      <a href="create-contract.html" class="btn btn-gold btn-sm" id="newDealBtn">+ New Contract</a>
+    </div>
+    <div class="tabs-row">
+      <button class="tab-btn active" id="tabAll">All</button>
+      <button class="tab-btn" id="tabActive">Active</button>
+      <button class="tab-btn" id="tabCompleted">Completed</button>
+    </div>
+    <div id="alertBox"></div>
+    <div id="loading" class="flex-center" style="padding:3rem"><div class="spinner"></div></div>
+    <div class="deals-panel active" id="panel-all"><div class="deals-list" id="list-all"></div></div>
+    <div class="deals-panel" id="panel-active"><div class="deals-list" id="list-active"></div></div>
+    <div class="deals-panel" id="panel-completed"><div class="deals-list" id="list-completed"></div></div>
+  </div>
+  <div style="text-align:center;margin-top:2rem">
+    <a href="role-select.html" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text3);text-decoration:none">← Switch role</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const STATUS = {
+  WAITING_FOR_CLIENT: { label: 'Waiting for Client', badge: 'badge-muted' },
+  CLIENT_JOINED:      { label: 'Client Joined',      badge: 'badge-cyan' },
+  PENDING:            { label: 'Pending',            badge: 'badge-amber' },
+  Pending:            { label: 'Pending',            badge: 'badge-amber' },
+  LOCKED:             { label: 'Payment Locked',     badge: 'badge-gold' },
+  DELIVERED:          { label: 'Delivered',          badge: 'badge-cyan' },
+  VERIFYING:          { label: 'Verifying',          badge: 'badge-amber' },
+  RELEASED:           { label: 'Payment Released',   badge: 'badge-green' },
+  DISPUTED:           { label: 'Disputed',           badge: 'badge-red' },
+};
+
+const params = new URLSearchParams(window.location.search);
+const userRoleVal = (localStorage.getItem('role') || 'Freelancer').trim();
+const viewRole = params.get('role') || userRoleVal.toLowerCase();
+
+requireAuth(async (user) => {
+  setNavUser(user);
+  setupLogout();
+  
+  const isFreelancer = viewRole === 'freelancer' || userRoleVal.toLowerCase() === 'freelancer';
+  document.getElementById('dashTitle').textContent = isFreelancer ? 'Freelancer Dashboard' : 'Client Dashboard';
+  document.getElementById('userRole').textContent = `Mode: ${isFreelancer ? '🛠 Freelancer' : '👤 Client'} · ${user.email}`;
+
+  if (!isFreelancer) {
+    const newDealBtn = document.getElementById('newDealBtn');
+    if (newDealBtn) {
+      newDealBtn.textContent = '+ New Contract';
+      newDealBtn.href = 'create-contract.html';
+      newDealBtn.style.display = 'inline-block';
+    }
+  }
+
+  // 🧪 DEBUG SAFETY LOGS & FETCH CONTRACT (key: "contract")
+  console.log("Stored Contract:", localStorage.getItem("contract"));
+  let mainContract = null;
+  const storedContractRaw = localStorage.getItem("contract");
+  if (storedContractRaw) {
+    try {
+      mainContract = JSON.parse(storedContractRaw);
+      console.log("Parsed Contract:", mainContract);
+    } catch (e) {
+      console.error("Contract parse error:", e);
+    }
+  }
+
+  // Render Freelancer Featured Contract Card
+  const flContainer = document.getElementById('freelancerContractContainer');
+  if (flContainer) {
+    if (isFreelancer && mainContract) {
+      flContainer.innerHTML = `
+        <div class="freelancer-contract-card fade-up">
+          <div class="flex-between mb-2">
+            <span class="mono gold" style="font-size:0.7rem;">CONTRACT ID: ${mainContract.contractId || mainContract.contract_id || 'NX-DEMO'}</span>
+            <span class="badge badge-amber">Status: ${mainContract.status || 'Pending'}</span>
+          </div>
+          <h2 style="font-size:1.3rem; margin-bottom:0.4rem;">${escHtml(mainContract.title || 'Secure Contract')}</h2>
+          <p style="font-size:0.85rem; color:var(--text2); margin-bottom:1rem;">${escHtml(mainContract.description || '')}</p>
+          <div class="stat-row" style="margin-bottom:1rem;">
+            <div class="stat-box"><div class="stat-box-num" style="color:var(--gold)">${formatINR(mainContract.amount || mainContract.budget || 50000)}</div><div class="stat-box-label">Budget</div></div>
+            <div class="stat-box"><div class="stat-box-num" style="font-size:1.1rem">${escHtml(mainContract.deadline || '7 Days')}</div><div class="stat-box-label">Deadline</div></div>
+            <div class="stat-box"><div class="stat-box-num" style="font-size:1.1rem">${escHtml(mainContract.freelancer || 'demo@freelancer.com')}</div><div class="stat-box-label">Freelancer</div></div>
+          </div>
+          <button class="btn btn-gold btn-full" onclick="handleAcceptContract()">Accept & Start Work</button>
+        </div>
+      `;
+    } else {
+      flContainer.innerHTML = '';
+    }
+  }
+
+  // Define handleAcceptContract globally
+  window.handleAcceptContract = function() {
+    if (mainContract) {
+      localStorage.setItem("acceptedContract", JSON.stringify(mainContract));
+    }
+    window.location.href = "upload-proof.html";
+  };
+
+  // Collect deals list
+  let deals = [];
+
+  if (mainContract) {
+    deals.push({
+      id: mainContract.contractId || mainContract.contract_id || 'NX-01',
+      dealId: mainContract.contractId || mainContract.contract_id || 'NX-01',
+      uniqueCode: mainContract.contractId || mainContract.contract_id || 'NX-01',
+      title: mainContract.title || 'Client Secure Contract',
+      description: mainContract.description || '',
+      budget: mainContract.amount || mainContract.budget || 50000,
+      createdAt: mainContract.createdAt || new Date().toISOString(),
+      status: mainContract.status || 'Pending'
+    });
+  }
+
+  const localList = JSON.parse(localStorage.getItem("nexrow_contracts") || "[]");
+  localList.forEach(c => {
+    if (!deals.find(d => d.id === c.contract_id)) {
+      deals.push({
+        id: c.contract_id,
+        dealId: c.contract_id,
+        uniqueCode: c.contract_id,
+        title: c.title,
+        description: c.description,
+        budget: c.total_amount,
+        createdAt: c.created_at,
+        status: c.contract_status || 'Pending'
+      });
+    }
+  });
+
+  if (window.supabase) {
+    try {
+      const fieldToQuery = isFreelancer ? 'freelancer_id' : 'client_id';
+      const { data } = await supabase.from('deals').select('*');
+      if (data) {
+        data.forEach(d => {
+          if (!deals.find(existing => existing.id === (d.unique_code || d.id))) {
+            deals.push({
+              ...d,
+              id: d.id,
+              dealId: d.deal_id || d.unique_code,
+              uniqueCode: d.unique_code,
+              createdAt: d.created_at,
+              status: d.status
+            });
+          }
+        });
+      }
+    } catch(e) { console.warn(e); }
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('statTotal').textContent = deals.length;
+  document.getElementById('statLocked').textContent = deals.filter(d => ['WAITING_FOR_CLIENT','CLIENT_JOINED','PENDING','Pending','LOCKED','DELIVERED','VERIFYING'].includes(d.status)).length;
+  document.getElementById('statReleased').textContent = deals.filter(d => d.status === 'RELEASED').length;
+
+  const renderList = (containerId, filtered) => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!filtered.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No contracts available</div><div class="empty-sub">${isFreelancer ? '// Waiting for client contract creation' : '// Create a contract to get started'}</div></div>`;
+      return;
+    }
+    el.innerHTML = filtered.map(d => {
+      const s = STATUS[d.status] || STATUS.PENDING;
+      const codeDisplay = d.uniqueCode ? `<span class="deal-code-badge">${d.uniqueCode}</span>` : '';
+      return `<a class="deal-card" href="status.html?id=${d.id}"><div class="deal-card-top"><div><div class="deal-card-id">${d.dealId || d.uniqueCode || d.id}</div><div class="deal-card-title">${escHtml(d.title)}</div></div><span class="badge ${s.badge}">${s.label}</span></div><div class="deal-card-desc">${escHtml(d.description || '')}</div><div class="deal-card-bottom"><div class="deal-card-amount">${formatINR(d.budget || d.amount || 0)}</div><span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text3)">${codeDisplay} · ${formatDate(d.createdAt)}</span></div></a>`;
+    }).join('');
+  };
+
+  const activeStatuses = ['WAITING_FOR_CLIENT','CLIENT_JOINED','PENDING','Pending','LOCKED','DELIVERED','VERIFYING'];
+  const completedStatuses = ['RELEASED','DISPUTED'];
+  renderList('list-all', deals);
+  renderList('list-active', deals.filter(d => activeStatuses.includes(d.status)));
+  renderList('list-completed', deals.filter(d => completedStatuses.includes(d.status)));
+});
+
+document.getElementById('tabAll').addEventListener('click', () => switchTab('all'));
+document.getElementById('tabActive').addEventListener('click', () => switchTab('active'));
+document.getElementById('tabCompleted').addEventListener('click', () => switchTab('completed'));
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  document.querySelectorAll('.deals-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
