@@ -225,7 +225,7 @@ class AlgorandServiceClass {
     if (clientMnemonic) {
       const acc = algosdk.mnemonicToSecretKey(clientMnemonic);
       this.clientWallet = {
-        address: acc.addr,
+        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
         mnemonic: clientMnemonic,
         sk: acc.sk,
         balance: 0,
@@ -235,7 +235,7 @@ class AlgorandServiceClass {
       // Mock generated if not configured
       const acc = algosdk.generateAccount();
       this.clientWallet = {
-        address: acc.addr,
+        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
         sk: acc.sk,
         mnemonic: algosdk.secretKeyToMnemonic(acc.sk),
         balance: 0,
@@ -246,7 +246,7 @@ class AlgorandServiceClass {
     if (freelancerMnemonic) {
       const acc = algosdk.mnemonicToSecretKey(freelancerMnemonic);
       this.freelancerWallet = {
-        address: acc.addr,
+        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
         mnemonic: freelancerMnemonic,
         sk: acc.sk,
         balance: 0,
@@ -256,7 +256,7 @@ class AlgorandServiceClass {
       // Mock generated if not configured
       const acc = algosdk.generateAccount();
       this.freelancerWallet = {
-        address: acc.addr,
+        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
         sk: acc.sk,
         mnemonic: algosdk.secretKeyToMnemonic(acc.sk),
         balance: 0,
@@ -305,6 +305,10 @@ class AlgorandServiceClass {
     console.log(`[REAL ESCROW] Creating Smart Contract Escrow for amount: ${totalAmount}...`);
     const clientAccount = algosdk.mnemonicToSecretKey(clientMnemonic);
     const freelancerAddressBytes = algosdk.decodeAddress(this.freelancerWallet.address).publicKey;
+    
+    if (!this.assetId || isNaN(this.assetId) || this.assetId <= 0) {
+      throw new Error(`Invalid asset ID configured: ${this.assetId}`);
+    }
     const assetIdBytes = algosdk.encodeUint64(this.assetId);
 
     const approvalBytes = await this.compileTeal(approvalTeal);
@@ -335,7 +339,11 @@ class AlgorandServiceClass {
     console.log(`[REAL ESCROW] App creation transaction submitted. TxID: ${appCreateTxId}`);
     
     const confirmation = await algosdk.waitForConfirmation(this.algodClient, appCreateTxId, 4);
-    const appId = Number(confirmation['application-index']);
+    // algosdk v3 uses camelCase keys and BigInt values
+    const appId = Number(confirmation['applicationIndex'] || confirmation['application-index']);
+    if (!appId || isNaN(appId)) {
+      throw new Error('Failed to retrieve application ID from deployment confirmation.');
+    }
     console.log(`[REAL ESCROW] Escrow App deployed successfully. App ID: ${appId}`);
 
     const escrowAddress = algosdk.getApplicationAddress(appId);
@@ -373,7 +381,8 @@ class AlgorandServiceClass {
       sender: clientAccount.addr,
       appIndex: appId,
       suggestedParams: optInParams,
-      appArgs: [new TextEncoder().encode('opt_in')]
+      appArgs: [new TextEncoder().encode('opt_in')],
+      foreignAssets: [this.assetId]
     });
 
     const signedOptIn = optInTx.signTxn(clientAccount.sk);
@@ -383,7 +392,15 @@ class AlgorandServiceClass {
     console.log(`[REAL ESCROW] Escrow contract successfully opted in to asset. TxID: ${optInTxId}`);
 
     // 2. Transfer USDC from Client to Escrow Address
-    const rawAmount = Math.round(Number(amount) * 1000000);
+    if (!this.assetId || isNaN(this.assetId) || this.assetId <= 0) {
+      throw new Error(`Invalid asset ID configured: ${this.assetId}`);
+    }
+
+    const parsedAmount = Number(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      throw new Error(`Invalid funding amount: ${amount}`);
+    }
+    const rawAmount = Math.round(parsedAmount * 1000000);
     console.log(`[REAL ESCROW] Transferring raw ${rawAmount} units to Escrow Address ${escrowAddress}...`);
     const transferParams = await this.algodClient.getTransactionParams().do();
     const transferTx = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
@@ -420,7 +437,9 @@ class AlgorandServiceClass {
       appArgs: [
         new TextEncoder().encode('release'),
         algosdk.encodeUint64(rawAmount)
-      ]
+      ],
+      foreignAssets: [this.assetId],
+      accounts: [typeof freelancerAddress === 'string' ? freelancerAddress : freelancerAddress.toString()]
     });
 
     const signedRelease = releaseTx.signTxn(clientAccount.sk);
@@ -453,7 +472,9 @@ class AlgorandServiceClass {
       appArgs: [
         new TextEncoder().encode('release'),
         algosdk.encodeUint64(remainingUSDC)
-      ]
+      ],
+      foreignAssets: [this.assetId],
+      accounts: [typeof freelancerAddress === 'string' ? freelancerAddress : freelancerAddress.toString()]
     });
 
     const signedRelease = releaseTx.signTxn(clientAccount.sk);
@@ -484,7 +505,8 @@ class AlgorandServiceClass {
       appArgs: [
         new TextEncoder().encode('refund'),
         algosdk.encodeUint64(remainingUSDC)
-      ]
+      ],
+      foreignAssets: [this.assetId]
     });
 
     const signedRefund = refundTx.signTxn(clientAccount.sk);
@@ -510,7 +532,8 @@ class AlgorandServiceClass {
       sender: clientAccount.addr,
       appIndex: appId,
       suggestedParams: params,
-      appArgs: [new TextEncoder().encode('dispute')]
+      appArgs: [new TextEncoder().encode('dispute')],
+      foreignAssets: [this.assetId]
     });
 
     const signedDispute = disputeTx.signTxn(clientAccount.sk);

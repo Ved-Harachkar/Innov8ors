@@ -109,6 +109,10 @@ export default function Status() {
       const freelancer = AlgorandService.getFreelancerWallet();
       const appId = project.algorandAppId;
 
+      if (!appId) {
+        throw new Error('This contract has not been funded on the Algorand blockchain. Please fund the escrow first.');
+      }
+
       const result = await AlgorandService.releaseMilestone(client.mnemonic, appId, freelancer.address, milestone.amount);
       await NexrowDB.updateMilestone(milestone.id, { workflowStatus: 'COMPLETED', paymentStatus: 'RELEASED' });
 
@@ -144,14 +148,17 @@ export default function Status() {
   async function handleFundEscrow() {
     setActionLoading('fund');
     try {
+      console.log('[DEBUG] handleFundEscrow. project details:', project);
       const client = AlgorandService.getClientWallet();
+      const budget = Number(project.totalBudget || project.budget || project.amount || 0);
+
       let appId = project.algorandAppId;
       if (!appId) {
-        const result = await AlgorandService.createEscrowApp(client.mnemonic, project.totalBudget);
+        const result = await AlgorandService.createEscrowApp(client.mnemonic, budget);
         appId = result.appId;
         await NexrowDB.updateProject(project.id, { algorandAppId: appId });
       }
-      await AlgorandService.fundEscrow(client.mnemonic, appId, project.totalBudget);
+      await AlgorandService.fundEscrow(client.mnemonic, appId, budget);
       await NexrowDB.updateProject(project.id, { status: 'Active Escrow' });
       for (const m of milestones) {
         await NexrowDB.updateMilestone(m.id, { paymentStatus: 'FUNDED' });
@@ -170,6 +177,9 @@ export default function Status() {
     setActionLoading('refund');
     try {
       const client = AlgorandService.getClientWallet();
+      if (!project.algorandAppId) {
+        throw new Error('This contract has not been funded on the Algorand blockchain. No escrow exists.');
+      }
       await AlgorandService.refundEscrow(client.mnemonic, project.algorandAppId);
       for (const m of milestones) {
         await NexrowDB.updateMilestone(m.id, { workflowStatus: 'COMPLETED', paymentStatus: 'REFUNDED' });
@@ -188,6 +198,9 @@ export default function Status() {
     if (!window.confirm('Raise a dispute for this contract?')) return;
     setActionLoading('dispute');
     try {
+      if (!project.algorandAppId) {
+        throw new Error('This contract has not been funded on the Algorand blockchain. No escrow exists.');
+      }
       await AlgorandService.raiseDispute(project.algorandAppId);
       await NexrowDB.updateProject(project.id, { status: 'Disputed' });
       setAlert({ type: 'warning', message: '⚠ Dispute raised! Escrow is frozen.' });
@@ -204,6 +217,9 @@ export default function Status() {
     try {
       const client = AlgorandService.getClientWallet();
       const freelancer = AlgorandService.getFreelancerWallet();
+      if (!project.algorandAppId) {
+        throw new Error('This contract has not been funded on the Algorand blockchain.');
+      }
       if (resolution === 'release') {
         await AlgorandService.releaseEscrow(client.mnemonic, project.algorandAppId, freelancer.address);
         for (const m of milestones) await NexrowDB.updateMilestone(m.id, { workflowStatus: 'COMPLETED', paymentStatus: 'RELEASED' });
@@ -400,19 +416,27 @@ export default function Status() {
                     {/* CLIENT ACTION: Release payment after freelancer marks complete */}
                     {isClient && isSubmitted && !isReleased && !isRefunded && !isCompleted && (
                       <div className="milestone-actions">
-                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.7rem', color: 'var(--amber)', marginBottom: '0.5rem' }}>
-                          ⚠ Freelancer marked this milestone complete. Review and release payment.
-                        </div>
-                        <button
-                          className="btn btn-gold"
-                          disabled={!!actionLoading}
-                          onClick={() => handleReleaseMilestone(m)}
-                          style={{ fontSize: '0.78rem' }}
-                        >
-                          {actionLoading === 'release-' + m.id
-                            ? <><span className="spinner"></span> Releasing...</>
-                            : '💰 Release Milestone Payment'}
-                        </button>
+                        {project.algorandAppId ? (
+                          <>
+                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.7rem', color: 'var(--amber)', marginBottom: '0.5rem' }}>
+                              ⚠ Freelancer marked this milestone complete. Review and release payment.
+                            </div>
+                            <button
+                              className="btn btn-gold"
+                              disabled={!!actionLoading}
+                              onClick={() => handleReleaseMilestone(m)}
+                              style={{ fontSize: '0.78rem' }}
+                            >
+                              {actionLoading === 'release-' + m.id
+                                ? <><span className="spinner"></span> Releasing...</>
+                                : '💰 Release Milestone Payment'}
+                            </button>
+                          </>
+                        ) : (
+                          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.72rem', color: 'var(--red)', background: 'rgba(239, 68, 68, 0.08)', padding: '0.8rem', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '4px' }}>
+                            ⚠ This contract has not been funded on-chain. You must click the <strong>"🔒 Fund Escrow on Algorand"</strong> button at the bottom of this page first.
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -442,7 +466,7 @@ export default function Status() {
               )}
 
               {/* CLIENT: Fund Escrow */}
-              {isClient && isPending && !isDisputed && (
+              {isClient && (isPending || !project.algorandAppId) && !isCompleted && !isDisputed && (
                 <button className="btn btn-gold btn-full" disabled={!!actionLoading} onClick={handleFundEscrow}>
                   {actionLoading === 'fund' ? <><span className="spinner"></span> Funding...</> : '🔒 Fund Escrow on Algorand'}
                 </button>
