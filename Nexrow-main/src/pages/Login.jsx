@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Alert from '../components/Alert';
 
@@ -19,8 +19,7 @@ export default function Login() {
   // Redirect if already authenticated
   useEffect(() => {
     if (user) {
-      const r = (role || 'Client').toLowerCase();
-      navigate(r === 'client' ? '/create-contract' : '/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [user, role, navigate]);
 
@@ -53,12 +52,22 @@ export default function Login() {
     setLoading(true);
 
     if (mode === 'login') {
+      if (email.trim().toLowerCase() === 'admin@gmail.com' && password === 'admin123') {
+        localStorage.setItem('nexrow_admin_auth', 'true');
+        localStorage.setItem('nexrow_admin_email', 'admin@gmail.com');
+        setAlert({ type: 'success', message: 'Welcome Admin! Redirecting to Control Center...' });
+        setTimeout(() => {
+          navigate('/admin');
+        }, 600);
+        return;
+      }
+
       try {
         const { profile: prof } = await signIn(email, password);
         const dbRole = prof?.role || selectedRole;
         setAlert({ type: 'success', message: `Welcome back! Logging in as ${dbRole}...` });
         setTimeout(() => {
-          navigate(dbRole.toLowerCase() === 'client' ? '/create-contract' : '/dashboard');
+          navigate('/dashboard');
         }, 600);
       } catch (err) {
         setLoading(false);
@@ -235,6 +244,12 @@ export default function Login() {
               </svg>
               Continue with Google
             </button>
+
+            <div style={{ marginTop: '1.2rem', textAlign: 'center' }}>
+              <Link to="/admin-login" style={{ color: 'var(--text3)', fontFamily: "'DM Mono', monospace", fontSize: '0.7rem', textDecoration: 'none' }}>
+                👑 Admin Control Login Portal
+              </Link>
+            </div>
           </div>
         </div>
       </div>

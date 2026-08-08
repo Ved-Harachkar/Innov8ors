@@ -21,7 +21,7 @@ export default function RoleSelect() {
         const userSnap = await getDoc(doc(db, 'profiles', user.id));
         if (userSnap.exists() && userSnap.data()?.role) {
           const r = userSnap.data().role.toLowerCase();
-          navigate(r === 'client' ? '/create-contract' : '/dashboard', { replace: true });
+          navigate('/dashboard', { replace: true });
         }
       }
     } catch (e) {
@@ -40,6 +40,24 @@ export default function RoleSelect() {
           full_name: user.email,
           role: roleName
         }, { merge: true });
+
+        // If they register as a freelancer, also add them to the freelancers provider collection
+        if (roleName === 'Freelancer') {
+          await setDoc(doc(db, 'freelancers', user.id), {
+            name: user.email.split('@')[0],
+            domain: 'Full Stack Web Development',
+            experience: '1 Year',
+            rating: 5.0,
+            completed_projects: 0,
+            hourly_rate: 1200,
+            hourly_rate_display: '₹1,200/hr',
+            location: 'Remote',
+            availability: 'Available',
+            bio: 'Registered Nexrow platform provider.',
+            email: user.email,
+            joined_at: new Date().toISOString()
+          }, { merge: true });
+        }
       }
 
       localStorage.setItem('role', roleName);
@@ -79,7 +97,7 @@ export default function RoleSelect() {
 
           <button
             className="role-card"
-            onClick={() => handleSetRole('Client', '/client-join')}
+            onClick={() => handleSetRole('Client', '/dashboard')}
             disabled={!!loadingRole}
             style={{ opacity: loadingRole === 'Client' ? 0.5 : 1 }}
           >

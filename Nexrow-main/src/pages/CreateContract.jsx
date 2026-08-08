@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { NexrowDB } from '../lib/db';
 import { AlgorandService } from '../lib/algorand';
@@ -9,15 +9,21 @@ import Alert from '../components/Alert';
 export default function CreateContract() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routedState = location.state || {};
+  const routedProvider = routedState.routedProvider || null;
 
   const [formData, setFormData] = useState({
-    title: '', description: '',
-    amount: '', paymentType: 'Full Payment', deadline: ''
+    title: routedState.title || '',
+    description: routedState.description || '',
+    amount: routedState.budget || '',
+    paymentType: routedState.paymentType || 'Full Payment',
+    deadline: routedState.deadline || ''
   });
 
-  const [milestones, setMilestones] = useState([
-    { title: 'Phase 1 — Setup & Initial Deliverable', amount: '' },
-    { title: 'Phase 2 — Full Development', amount: '' }
+  const [milestones, setMilestones] = useState(routedState.milestones || [
+    { title: 'Phase 1 — Setup & Initial Deliverable', amount: '', description: '' },
+    { title: 'Phase 2 — Full Development', amount: '', description: '' }
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -78,7 +84,7 @@ export default function CreateContract() {
         description: formData.description,
         clientEmail: user?.email,
         clientId: user?.id,
-        freelancerEmail: 'Open Pool (Any Freelancer)',
+        freelancerEmail: routedProvider ? routedProvider.email : 'Open Pool (Any Freelancer)',
         totalBudget: Number(formData.amount),
         paymentType: formData.paymentType,
         deadline: formData.deadline,
@@ -91,6 +97,7 @@ export default function CreateContract() {
             projectId: project.id,
             title: milestones[i].title,
             amount: Number(milestones[i].amount),
+            description: milestones[i].description || '',
             orderIndex: i
           });
         }
@@ -130,6 +137,59 @@ export default function CreateContract() {
             {/* Overview Section */}
             <div className="form-section fade-up">
               <div className="form-section-title">1. Contract Overview</div>
+
+              {/* x402 Policy Router Widget */}
+              {routedProvider ? (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--gold-dim)',
+                  padding: '0.85rem 1.1rem', borderRadius: '6px', marginBottom: '1.2rem',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.65rem', color: 'var(--gold)', letterSpacing: '0.05em' }}>
+                      🤖 x402 ROUTED PROVIDER
+                    </div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: '0.9rem', color: '#fff', marginTop: '0.15rem' }}>
+                      {routedProvider.name} ({routedProvider.email})
+                    </div>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.65rem', color: 'var(--text3)' }}>
+                      Policy: {routedState.routingPolicy === 'balanced' ? 'Balanced Routing' : routedState.routingPolicy === 'price' ? 'Cost Optimized' : routedState.routingPolicy === 'quality' ? 'Quality Optimized' : 'Speed Optimized'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/provider-router', { state: { title: formData.title, budget: formData.amount, description: formData.description, paymentType: formData.paymentType, deadline: formData.deadline, milestones } })}
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: '0.72rem' }}
+                  >
+                    Change Route
+                  </button>
+                </div>
+              ) : (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.01)', border: '1px dashed var(--border)',
+                  padding: '0.85rem 1.1rem', borderRadius: '6px', marginBottom: '1.2rem',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.65rem', color: 'var(--text3)', letterSpacing: '0.05em' }}>
+                      🤖 x402 ROUTED PROVIDER
+                    </div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: '0.9rem', color: 'var(--text2)', marginTop: '0.15rem' }}>
+                      Open Pool (Any Freelancer)
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/provider-router', { state: { title: formData.title, budget: formData.amount, description: formData.description, paymentType: formData.paymentType, deadline: formData.deadline, milestones } })}
+                    className="btn btn-gold btn-sm"
+                    style={{ fontSize: '0.72rem', background: 'var(--gold)', color: '#000' }}
+                  >
+                    🔍 Run x402 Policy Router
+                  </button>
+                </div>
+              )}
+
               <div className="field">
                 <label>Contract Title</label>
                 <input type="text" name="title" placeholder="e.g. Full-Stack Web App Development" value={formData.title} onChange={handleChange} />
@@ -171,38 +231,80 @@ export default function CreateContract() {
                   </div>
 
                   {milestones.map((m, idx) => (
-                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 38px', gap: '0.6rem', alignItems: 'center', marginBottom: '0.8rem' }}>
-                      <input
-                        type="text"
-                        placeholder={`Milestone ${idx + 1} Title`}
-                        value={m.title}
-                        onChange={(e) => handleMilestoneChange(idx, 'title', e.target.value)}
-                        style={{
-                          background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)',
-                          fontFamily: "'DM Mono', monospace", fontSize: '0.82rem', padding: '0.7rem 0.9rem', outline: 'none'
-                        }}
-                      />
-                      <div className="amount-wrap">
-                        <span className="amount-prefix">₹</span>
+                    <div key={idx} style={{
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border)',
+                      padding: '1rem',
+                      borderRadius: '6px',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 38px', gap: '0.6rem', alignItems: 'center', marginBottom: '0.6rem' }}>
                         <input
-                          type="number"
-                          placeholder="Amount"
-                          value={m.amount}
-                          onChange={(e) => handleMilestoneChange(idx, 'amount', e.target.value)}
+                          type="text"
+                          placeholder={`Milestone ${idx + 1} Title`}
+                          value={m.title}
+                          onChange={(e) => handleMilestoneChange(idx, 'title', e.target.value)}
                           style={{
                             background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)',
-                            fontFamily: "'DM Mono', monospace", fontSize: '0.82rem', padding: '0.7rem 0.9rem 0.7rem 2rem', outline: 'none'
+                            fontFamily: "'DM Mono', monospace", fontSize: '0.82rem', padding: '0.7rem 0.9rem', outline: 'none'
+                          }}
+                        />
+                        <div className="amount-wrap">
+                          <span className="amount-prefix">₹</span>
+                          <input
+                            type="number"
+                            placeholder="Amount"
+                            value={m.amount}
+                            onChange={(e) => handleMilestoneChange(idx, 'amount', e.target.value)}
+                            style={{
+                              background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)',
+                              fontFamily: "'DM Mono', monospace", fontSize: '0.82rem', padding: '0.7rem 0.9rem 0.7rem 2rem', outline: 'none'
+                            }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeMilestone(idx)}
+                          disabled={milestones.length <= 1}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#ef4444',
+                            height: '42px',
+                            width: '38px',
+                            cursor: milestones.length <= 1 ? 'not-allowed' : 'pointer',
+                            opacity: milestones.length <= 1 ? 0.3 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontFamily: "'DM Mono', monospace",
+                            fontSize: '0.85rem',
+                            transition: 'all 0.2s ease',
+                            padding: 0
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div>
+                        <textarea
+                          placeholder={`Specify detailed requirements/scope for Phase ${idx + 1}...`}
+                          value={m.description || ''}
+                          onChange={(e) => handleMilestoneChange(idx, 'description', e.target.value)}
+                          style={{
+                            width: '100%',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text)',
+                            fontFamily: "'DM Mono', monospace",
+                            fontSize: '0.78rem',
+                            padding: '0.6rem 0.8rem',
+                            minHeight: '60px',
+                            resize: 'vertical',
+                            outline: 'none'
                           }}
                         />
                       </div>
-                      <button
-                        type="button"
-                        className="btn-remove"
-                        onClick={() => removeMilestone(idx)}
-                        disabled={milestones.length <= 1}
-                      >
-                        ✕
-                      </button>
                     </div>
                   ))}
 
