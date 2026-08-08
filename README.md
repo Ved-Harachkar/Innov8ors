@@ -16,7 +16,7 @@ AI agents and decentralized applications frequently need to request and pay for 
 2. **Result Verification (Audit)**: How can the agent programmatically verify that a provider actually delivered the correct results before releasing payment?
 3. **Route Optimization (Policy)**: How does the agent choose the best provider (latency, price, quality) based on custom business rules?
 
-### The Solution: Nexrow Autopay
+### The Solution: Nexrow
 Nexrow is a policy-driven task router and autonomous settlement protocol that implements the **x402 (HTTP 402 Payment Required)** architecture:
 * **Task Decomposition**: Projects are broken down into granular milestones, each with distinct deliverable requirements.
 * **x402 Policy Router**: Matches and ranks available service providers (freelancers) based on a selected routing policy (Highest Quality, Lowest Price, Fastest Speed, or Balanced).
