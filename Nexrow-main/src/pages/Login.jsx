@@ -107,22 +107,46 @@ export default function Login() {
         <div className="auth-left-grid"></div>
         <div className="auth-left-glow"></div>
         <div className="auth-brand">
-          <div className="auth-brand-logo">Ne<span>x</span>row</div>
-          <div className="auth-brand-tag">// secure escrow protocol v2.0</div>
+          <div className="auth-brand-logo" style={{ marginBottom: 0 }}>Ne<span>x</span>row</div>
+          <div style={{ color: 'var(--gold)', fontFamily: "'Syne', sans-serif", fontSize: '0.85rem', fontWeight: 700, marginTop: '0.2rem', letterSpacing: '0.04em' }}>
+            Freelancing without fear
+          </div>
         </div>
-        <div className="auth-features">
-          <div className="auth-feature">
-            <span className="auth-feature-icon">🔒</span>
-            <span className="auth-feature-text">Military-grade escrow protection for every transaction</span>
-          </div>
-          <div className="auth-feature">
-            <span className="auth-feature-icon">⚡</span>
-            <span className="auth-feature-text">AI-powered verification & instant settlement</span>
-          </div>
-          <div className="auth-feature">
-            <span className="auth-feature-icon">🔗</span>
-            <span className="auth-feature-text">On-chain transparency via Algorand blockchain</span>
-          </div>
+        
+        {/* Center Headline */}
+        <div style={{ margin: 'auto 0', padding: '1.5rem 0' }}>
+          <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', color: '#fff', lineHeight: 1.15, marginBottom: '0.2rem' }}>
+            Freelancers Deliver.
+          </h1>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 'clamp(1.5rem, 3.5vw, 2.4rem)', color: 'var(--gold)', lineHeight: 1.15, marginBottom: '1.2rem' }}>
+            AI Verifies. Blockchain Pays.
+          </h2>
+          <p style={{ color: 'var(--text2)', fontSize: '0.85rem', lineHeight: 1.6, maxWidth: '440px', margin: 0 }}>
+            No trust required. Every submission is verified by AI agents, and payments are securely released through escrow after validation.
+          </p>
+        </div>
+
+        {/* Bottom Numbered Steps */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%', maxWidth: '480px', zIndex: 1 }}>
+          {[
+            'AI verifies submission',
+            'Tasks executed across providers',
+            'Payments tracked on-chain',
+            'System decides → release or dispute'
+          ].map((item, index) => (
+            <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.6rem' }}>
+              <div style={{
+                width: '24px', height: '24px', borderRadius: '2px', border: '1px solid var(--gold-dim)',
+                background: 'var(--gold-dim2)', color: 'var(--gold)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontFamily: "'DM Mono', monospace", fontSize: '0.72rem', fontWeight: 700
+              }}>
+                {index + 1}
+              </div>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.75rem', color: 'var(--text2)' }}>
+                {item}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
