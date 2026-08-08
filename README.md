@@ -3,7 +3,7 @@
 ## Project Information
 
 * **Team Name**: Innov8ors
-* **Project Title**: Nexrow Autopay: Policy-Driven Router & Autonomous Escrow
+* **Project Title**: Nexrow Policy-Driven Router & Autonomous Escrow Building the Future of Payments and ensuring the trust and payment between Freelancers and Clients
 * **Track/Theme**: Web3 & Blockchain (Algorand Track) / AI Integration (x402 Protocol)
 
 ---
