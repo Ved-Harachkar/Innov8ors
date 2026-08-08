@@ -5,6 +5,8 @@ import { NexrowDB } from '../lib/db';
 import { AlgorandService } from '../lib/algorand';
 import Navbar from '../components/Navbar';
 import Alert from '../components/Alert';
+import { db, doc } from '../lib/firebase';
+import { onSnapshot, query, collection, where } from 'firebase/firestore';
 
 function formatINR(amount) {
   return '₹' + Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -43,7 +45,95 @@ export default function Status() {
   const [payments, setPayments] = useState([]);
   const [showReportModal, setShowReportModal] = useState(false);
 
-  useEffect(() => { loadDeal(); }, [id, user]);
+  useEffect(() => {
+    loadDeal();
+
+    if (!id || !user) return;
+
+    // 1) Real-time listener for the active contract/project
+    const unsubProject = onSnapshot(doc(db, 'projects', id), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const updatedProject = {
+          id: snapshot.id,
+          title: data.title,
+          description: data.description,
+          clientEmail: data.client_email,
+          clientId: data.client_id,
+          freelancerEmail: data.freelancer_email,
+          freelancerId: data.freelancer_id,
+          totalBudget: data.total_budget,
+          paymentType: data.payment_type,
+          deadline: data.deadline,
+          status: data.status,
+          algorandAppId: data.algorand_app_id,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        };
+        setProject(updatedProject);
+
+        // Sync into local cache
+        const projIdx = NexrowDB.projects.findIndex(p => p.id === id);
+        if (projIdx !== -1) {
+          NexrowDB.projects[projIdx] = updatedProject;
+        } else {
+          NexrowDB.projects.push(updatedProject);
+        }
+      }
+    }, (error) => {
+      console.warn('Real-time project listener error:', error);
+    });
+
+    // 2) Real-time listener for milestones belonging to this contract
+    const qMilestones = query(collection(db, 'milestones'), where('project_id', '==', id));
+    const unsubMilestones = onSnapshot(qMilestones, (snapshot) => {
+      const updatedMilestones = [];
+      snapshot.forEach(docSnap => {
+        const mdata = docSnap.data();
+        updatedMilestones.push({
+          id: docSnap.id,
+          projectId: mdata.project_id,
+          title: mdata.title,
+          description: mdata.description || '',
+          amount: mdata.amount,
+          orderIndex: mdata.order_index,
+          workflowStatus: mdata.workflow_status || 'PENDING',
+          paymentStatus: mdata.payment_status || 'UNFUNDED',
+          createdAt: mdata.created_at,
+          proofText: mdata.proof_text || '',
+          proofFileName: mdata.proof_file_name || '',
+          proofFileData: mdata.proof_file_data || '',
+          aiFeedback: mdata.ai_feedback || '',
+          aiStatus: mdata.ai_status || ''
+        });
+      });
+
+      // Maintain order sequence
+      updatedMilestones.sort((a, b) => a.orderIndex - b.orderIndex);
+
+      if (updatedMilestones.length > 0) {
+        setMilestones(updatedMilestones);
+
+        // Sync into local cache
+        updatedMilestones.forEach(um => {
+          const mIdx = NexrowDB.milestones.findIndex(m => m.id === um.id);
+          if (mIdx !== -1) {
+            NexrowDB.milestones[mIdx] = um;
+          } else {
+            NexrowDB.milestones.push(um);
+          }
+        });
+      }
+    }, (error) => {
+      console.warn('Real-time milestones listener error:', error);
+    });
+
+    // Clean up connections on route unmount
+    return () => {
+      unsubProject();
+      unsubMilestones();
+    };
+  }, [id, user]);
 
   async function loadDeal() {
     if (!user) return;
