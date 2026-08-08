@@ -91,3 +91,5 @@ npm run dev
 ```
 
 The application will run locally at [http://localhost:5173](http://localhost:5173)  or On vercel : https://innov8ors-tau.vercel.app/
+
+You can also view the Future Scope Demo at : https://akeel-guhagarkar.github.io/nexrow-ai-escrow/
