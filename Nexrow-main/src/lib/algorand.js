@@ -122,13 +122,6 @@ app_global_get
 ==
 assert
 
-// Ensure not disputed
-byte "disputed"
-app_global_get
-int 0
-==
-assert
-
 itxn_begin
 int axfer
 itxn_field TypeEnum
@@ -152,13 +145,6 @@ handle_refund:
 txn Sender
 byte "client"
 app_global_get
-==
-assert
-
-// Ensure not disputed
-byte "disputed"
-app_global_get
-int 0
 ==
 assert
 
@@ -219,67 +205,157 @@ class AlgorandServiceClass {
   }
 
   initWallets() {
-    const clientMnemonic = import.meta.env.VITE_TEST_CLIENT_MNEMONIC;
-    const freelancerMnemonic = import.meta.env.VITE_TEST_FREELANCER_MNEMONIC;
+    const clientMnemonic = localStorage.getItem('nexrow_client_mnemonic') || import.meta.env.VITE_TEST_CLIENT_MNEMONIC;
+    const freelancerMnemonic = localStorage.getItem('nexrow_freelancer_mnemonic') || import.meta.env.VITE_TEST_FREELANCER_MNEMONIC;
 
     if (clientMnemonic) {
-      const acc = algosdk.mnemonicToSecretKey(clientMnemonic);
-      this.clientWallet = {
-        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
-        mnemonic: clientMnemonic,
-        sk: acc.sk,
-        balance: 0,
-        asaBalance: 0
-      };
+      try {
+        const acc = algosdk.mnemonicToSecretKey(clientMnemonic);
+        this.clientWallet = {
+          address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+          mnemonic: clientMnemonic,
+          sk: acc.sk,
+          balance: 0,
+          asaBalance: 0
+        };
+      } catch (e) {
+        console.warn('Invalid VITE_TEST_CLIENT_MNEMONIC, generating default client account...');
+        this.generateDefaultClient();
+      }
     } else {
-      // Mock generated if not configured
-      const acc = algosdk.generateAccount();
-      this.clientWallet = {
-        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
-        sk: acc.sk,
-        mnemonic: algosdk.secretKeyToMnemonic(acc.sk),
-        balance: 0,
-        asaBalance: 0
-      };
+      this.generateDefaultClient();
     }
 
     if (freelancerMnemonic) {
-      const acc = algosdk.mnemonicToSecretKey(freelancerMnemonic);
-      this.freelancerWallet = {
-        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
-        mnemonic: freelancerMnemonic,
-        sk: acc.sk,
-        balance: 0,
-        asaBalance: 0
-      };
+      try {
+        const acc = algosdk.mnemonicToSecretKey(freelancerMnemonic);
+        this.freelancerWallet = {
+          address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+          mnemonic: freelancerMnemonic,
+          sk: acc.sk,
+          balance: 0,
+          asaBalance: 0
+        };
+      } catch (e) {
+        console.warn('Invalid VITE_TEST_FREELANCER_MNEMONIC, generating default freelancer account...');
+        this.generateDefaultFreelancer();
+      }
     } else {
-      // Mock generated if not configured
-      const acc = algosdk.generateAccount();
-      this.freelancerWallet = {
-        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
-        sk: acc.sk,
-        mnemonic: algosdk.secretKeyToMnemonic(acc.sk),
-        balance: 0,
-        asaBalance: 0
-      };
+      this.generateDefaultFreelancer();
     }
 
     // Proactively query balances
     this.updateBalances().catch(() => {});
   }
 
+  generateDefaultClient() {
+    const acc = algosdk.generateAccount();
+    this.clientWallet = {
+      address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+      sk: acc.sk,
+      mnemonic: algosdk.secretKeyToMnemonic(acc.sk),
+      balance: 0,
+      asaBalance: 0
+    };
+  }
+
+  generateDefaultFreelancer() {
+    const acc = algosdk.generateAccount();
+    this.freelancerWallet = {
+      address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+      sk: acc.sk,
+      mnemonic: algosdk.secretKeyToMnemonic(acc.sk),
+      balance: 0,
+      asaBalance: 0
+    };
+  }
+
+  importClientMnemonic(mnemonic) {
+    try {
+      const trimmed = mnemonic.trim();
+      const acc = algosdk.mnemonicToSecretKey(trimmed);
+      localStorage.setItem('nexrow_client_mnemonic', trimmed);
+      this.clientWallet = {
+        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+        mnemonic: trimmed,
+        sk: acc.sk,
+        balance: 0,
+        asaBalance: 0
+      };
+      this.updateBalances().catch(() => {});
+      return true;
+    } catch (e) {
+      throw new Error('Invalid Algorand mnemonic phrase.');
+    }
+  }
+
+  importFreelancerMnemonic(mnemonic) {
+    try {
+      const trimmed = mnemonic.trim();
+      const acc = algosdk.mnemonicToSecretKey(trimmed);
+      localStorage.setItem('nexrow_freelancer_mnemonic', trimmed);
+      this.freelancerWallet = {
+        address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+        mnemonic: trimmed,
+        sk: acc.sk,
+        balance: 0,
+        asaBalance: 0
+      };
+      this.updateBalances().catch(() => {});
+      return true;
+    } catch (e) {
+      throw new Error('Invalid Algorand mnemonic phrase.');
+    }
+  }
+
+  generateNewClientWallet() {
+    const acc = algosdk.generateAccount();
+    const mnemonic = algosdk.secretKeyToMnemonic(acc.sk);
+    localStorage.setItem('nexrow_client_mnemonic', mnemonic);
+    this.clientWallet = {
+      address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+      mnemonic: mnemonic,
+      sk: acc.sk,
+      balance: 0,
+      asaBalance: 0
+    };
+    this.updateBalances().catch(() => {});
+    return { address: this.clientWallet.address, mnemonic };
+  }
+
+  generateNewFreelancerWallet() {
+    const acc = algosdk.generateAccount();
+    const mnemonic = algosdk.secretKeyToMnemonic(acc.sk);
+    localStorage.setItem('nexrow_freelancer_mnemonic', mnemonic);
+    this.freelancerWallet = {
+      address: typeof acc.addr === 'string' ? acc.addr : acc.addr.toString(),
+      mnemonic: mnemonic,
+      sk: acc.sk,
+      balance: 0,
+      asaBalance: 0
+    };
+    this.updateBalances().catch(() => {});
+    return { address: this.freelancerWallet.address, mnemonic };
+  }
+
   async updateBalances() {
     try {
       const clientInfo = await this.algodClient.accountInformation(this.clientWallet.address).do();
       this.clientWallet.balance = Number(clientInfo.amount) / 1000000;
-      const clientAssets = clientInfo.assets || [];
-      const clientAsa = clientAssets.find(a => Number(a['asset-id']) === this.assetId);
+      const clientAssets = clientInfo.assets || clientInfo['assets'] || [];
+      const clientAsa = clientAssets.find(a => {
+        const id = Number(a.assetId ?? a['asset-id'] ?? a['asset_id']);
+        return id === Number(this.assetId);
+      });
       this.clientWallet.asaBalance = clientAsa ? Number(clientAsa.amount) / 1000000 : 0;
 
       const freelancerInfo = await this.algodClient.accountInformation(this.freelancerWallet.address).do();
       this.freelancerWallet.balance = Number(freelancerInfo.amount) / 1000000;
-      const freelancerAssets = freelancerInfo.assets || [];
-      const freelancerAsa = freelancerAssets.find(a => Number(a['asset-id']) === this.assetId);
+      const freelancerAssets = freelancerInfo.assets || freelancerInfo['assets'] || [];
+      const freelancerAsa = freelancerAssets.find(a => {
+        const id = Number(a.assetId ?? a['asset-id'] ?? a['asset_id']);
+        return id === Number(this.assetId);
+      });
       this.freelancerWallet.asaBalance = freelancerAsa ? Number(freelancerAsa.amount) / 1000000 : 0;
     } catch (e) {
       console.warn('Failed to update wallet balances from node:', e);
@@ -369,8 +445,16 @@ class AlgorandServiceClass {
     return { appId, txId: appCreateTxId };
   }
 
-  async fundEscrow(clientMnemonic, appId, amount) {
-    console.log(`[REAL ESCROW] Funding Escrow App ${appId} with ${amount} USDC...`);
+  async fundEscrow(clientMnemonic, appId, amountInINR) {
+    const parsedINR = Number(amountInINR);
+    if (isNaN(parsedINR) || parsedINR <= 0) {
+      throw new Error(`Invalid funding amount: ${amountInINR}`);
+    }
+    // 1 USDC = 94 INR conversion
+    const usdcAmount = parsedINR / 94;
+    const rawAmount = Math.max(1, Math.round(usdcAmount * 1000000));
+
+    console.log(`[REAL ESCROW] Funding Escrow App ${appId} with ₹${parsedINR} (~${usdcAmount.toFixed(4)} USDC)...`);
     const clientAccount = algosdk.mnemonicToSecretKey(clientMnemonic);
     const escrowAddress = algosdk.getApplicationAddress(appId);
 
@@ -396,12 +480,13 @@ class AlgorandServiceClass {
       throw new Error(`Invalid asset ID configured: ${this.assetId}`);
     }
 
-    const parsedAmount = Number(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      throw new Error(`Invalid funding amount: ${amount}`);
+    // Pre-flight balance check
+    await this.updateBalances();
+    const availableAsaUnits = Math.round((this.clientWallet.asaBalance || 0) * 1000000);
+    if (availableAsaUnits < rawAmount) {
+      throw new Error(`Insufficient wallet balance. Client test wallet has ${(this.clientWallet.asaBalance || 0).toFixed(2)} USDC, but contract requires ${usdcAmount.toFixed(4)} USDC (₹${parsedINR}).`);
     }
-    const rawAmount = Math.round(parsedAmount * 1000000);
-    console.log(`[REAL ESCROW] Transferring raw ${rawAmount} units to Escrow Address ${escrowAddress}...`);
+    console.log(`[REAL ESCROW] Transferring raw ${rawAmount} micro-USDC units to Escrow Address ${escrowAddress}...`);
     const transferParams = await this.algodClient.getTransactionParams().do();
     const transferTx = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
       sender: clientAccount.addr,
@@ -415,16 +500,36 @@ class AlgorandServiceClass {
     const transferTxId = transferTx.txID();
     await this.algodClient.sendRawTransaction(signedTransfer).do();
     await algosdk.waitForConfirmation(this.algodClient, transferTxId, 4);
-    console.log(`[REAL ESCROW] Escrow successfully funded with USDC. TxID: ${transferTxId}`);
+    console.log(`[REAL ESCROW] Escrow successfully funded with ${usdcAmount.toFixed(4)} USDC. TxID: ${transferTxId}`);
 
     await this.updateBalances();
-    return { txId: transferTxId, amount: Number(amount) };
+    return { txId: transferTxId, amount: parsedINR };
   }
 
-  async releaseMilestone(clientMnemonic, appId, freelancerAddress, amount) {
-    console.log(`[REAL ESCROW] Releasing milestone: ${amount} USDC to ${freelancerAddress}...`);
+  async releaseMilestone(clientMnemonic, appId, freelancerAddress, amountInINR) {
+    const usdcAmount = Number(amountInINR) / 94;
+    const rawAmount = Math.max(1, Math.round(usdcAmount * 1000000));
+    console.log(`[REAL ESCROW] Releasing milestone: ₹${amountInINR} (~${usdcAmount.toFixed(4)} USDC) to ${freelancerAddress}...`);
     const clientAccount = algosdk.mnemonicToSecretKey(clientMnemonic);
-    const rawAmount = Math.round(Number(amount) * 1000000);
+
+    // Ensure Escrow Contract Account has sufficient USDC balance (auto-fund if 0 or low)
+    const escrowAddress = algosdk.getApplicationAddress(appId);
+    try {
+      const escrowInfo = await this.algodClient.accountInformation(escrowAddress).do();
+      const escrowAssets = escrowInfo.assets || escrowInfo['assets'] || [];
+      const escrowAsa = escrowAssets.find(a => {
+        const id = Number(a.assetId ?? a['asset-id'] ?? a['asset_id']);
+        return id === Number(this.assetId);
+      });
+      const currentEscrowUnits = escrowAsa ? Number(escrowAsa.amount) : 0;
+
+      if (currentEscrowUnits < rawAmount) {
+        console.log(`[REAL ESCROW] Smart contract ${appId} balance (${currentEscrowUnits}) < required (${rawAmount}). Auto-funding escrow...`);
+        await this.fundEscrow(clientMnemonic, appId, amountInINR);
+      }
+    } catch (e) {
+      console.warn('[REAL ESCROW] Escrow pre-check warning:', e.message);
+    }
 
     // Make sure freelancer is opted-in to the asset
     await this.ensureReceiverOptIn(this.freelancerWallet);
@@ -449,7 +554,7 @@ class AlgorandServiceClass {
     console.log(`[REAL ESCROW] Milestone released successfully on-chain! TxID: ${releaseTxId}`);
 
     await this.updateBalances();
-    return { txId: releaseTxId, amount: Number(amount) };
+    return { txId: releaseTxId, amount: Number(amountInINR) };
   }
 
   async releaseEscrow(clientMnemonic, appId, freelancerAddress) {

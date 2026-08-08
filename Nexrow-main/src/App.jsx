@@ -13,6 +13,11 @@ import Payment from './pages/Payment';
 import ClientJoin from './pages/ClientJoin';
 import OtpVerify from './pages/OtpVerify';
 import RoleSelect from './pages/RoleSelect';
+import ProviderRouter from './pages/ProviderRouter';
+
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminRoute from './components/AdminRoute';
 
 export default function App() {
   return (
@@ -21,6 +26,14 @@ export default function App() {
         <Routes>
           {/* Public Route */}
           <Route path="/login" element={<Login />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+
+          {/* Admin Protected Route */}
+          <Route path="/admin" element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          } />
 
           {/* Protected Routes */}
           <Route path="/dashboard" element={
@@ -32,6 +45,12 @@ export default function App() {
           <Route path="/create-contract" element={
             <ProtectedRoute requiredRole="Client">
               <CreateContract />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/provider-router" element={
+            <ProtectedRoute requiredRole="Client">
+              <ProviderRouter />
             </ProtectedRoute>
           } />
 

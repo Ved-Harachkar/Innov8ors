@@ -1,0 +1,163 @@
+{
+  "name": "Nexrow AI Milestone Verifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "verify-milestone",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Receive Submission",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "nexrow-verify-milestone"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nconst projectTitle = body.projectTitle || 'Untitled Project';\nconst projectDescription = body.projectDescription || 'No project description provided.';\nconst milestoneTitle = body.milestoneTitle || 'Untitled Milestone';\nconst milestoneDescription = body.milestoneDescription || 'No milestone description provided.';\nconst proofText = body.proofText || '';\nconst proofFileName = body.proofFileName || '';\nlet proofFileContent = '';\n\n// Decode text file if present (skip image data)\nif (body.proofFileData && body.proofFileData.startsWith('data:text/')) {\n  try {\n    const base64Part = body.proofFileData.split(',')[1];\n    proofFileContent = Buffer.from(base64Part, 'base64').toString('utf-8').substring(0, 3000);\n  } catch(e) {\n    proofFileContent = '[could not decode text file]';\n  }\n} else if (body.proofFileData && body.proofFileData.startsWith('data:image/')) {\n  proofFileContent = '[An image file was attached. Consider the file name and submission text as evidence.]';\n}\n\nconst prompt = `You are an impartial AI auditor for a decentralized freelancing platform called Nexrow. Your ONLY job is to determine whether the freelancer's submitted work satisfies the client's requirements for this specific milestone.\n\n--- PROJECT CONTEXT ---\nProject Title: ${projectTitle}\nClient's Project Requirements: ${projectDescription}\n\n--- MILESTONE DETAILS ---\nMilestone Title: ${milestoneTitle}\nMilestone Scope: ${milestoneDescription}\n\n--- FREELANCER'S SUBMISSION ---\nSubmission Notes: ${proofText || '(No text notes provided)'}\nAttached File Name: ${proofFileName || '(No file attached)'}\nAttached File Content: ${proofFileContent || '(No readable file content)'}\n\n--- YOUR TASK ---\nCarefully analyze the freelancer's submission against the client's requirements and the milestone scope.\n\nRespond ONLY with a valid JSON object in this exact format:\n{\n  \"satisfied\": true or false,\n  \"reason\": \"A detailed 1-3 sentence explanation of your decision. If satisfied, confirm what was delivered. If not satisfied, clearly state what is missing or incorrect and what the freelancer must do to fix it.\"\n}\n\nDo NOT include any text outside the JSON object.`;\n\nreturn [{ json: { prompt, projectId: body.projectId, milestoneId: body.milestoneId } }];"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $credentials.value }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "contents",
+              "value": "=[{\"role\":\"user\",\"parts\":[{\"text\":\"{{ $json.prompt }}\"}]}]"
+            },
+            {
+              "name": "generationConfig",
+              "value": "={\"temperature\":0.1,\"maxOutputTokens\":512,\"responseMimeType\":\"application/json\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "call-gemini",
+      "name": "Call Gemini AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "gemini-api-key",
+          "name": "Gemini API Key"
+        }
+      },
+      "notes": "Configure: Create an 'HTTP Query Auth' credential named 'Gemini API Key' with the field 'value' set to your Google AI Studio API key. Get a free key at https://aistudio.google.com/"
+    },
+    {
+      "parameters": {
+        "jsCode": "const geminiResponse = $input.first().json;\nconst milestoneId = $('Prepare AI Prompt').first().json.milestoneId;\nconst projectId = $('Prepare AI Prompt').first().json.projectId;\n\nlet result;\ntry {\n  const rawText = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n  result = JSON.parse(rawText.trim());\n} catch(e) {\n  // Fallback: if parsing fails, mark as not satisfied\n  result = {\n    satisfied: false,\n    reason: 'AI evaluation failed to produce a valid response. Please review the submission manually.'\n  };\n}\n\nif (typeof result.satisfied !== 'boolean') {\n  result.satisfied = false;\n  result.reason = result.reason || 'AI response was ambiguous. Please review manually.';\n}\n\nreturn [{ json: { ...result, milestoneId, projectId } }];"
+      },
+      "id": "parse-response",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ satisfied: $json.satisfied, reason: $json.reason, milestoneId: $json.milestoneId, projectId: $json.projectId }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Frontend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Receive Submission": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Gemini AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Gemini AI": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Frontend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Nexrow AI Milestone Verification Workflow. Analyzes freelancer proof-of-work submissions against client requirements using Google Gemini AI. Returns { satisfied: bool, reason: string } to the frontend, which then auto-releases the Algorand payment if satisfied.",
+    "setupInstructions": [
+      "1. Import this JSON into your n8n instance via Workflows > Import.",
+      "2. Create an 'HTTP Query Auth' credential in n8n: Name it 'Gemini API Key', set Field Name to 'key', and Value to your Google AI Studio API key (get one free at https://aistudio.google.com/).",
+      "3. Activate the workflow.",
+      "4. Copy the webhook URL (e.g. https://your-n8n.com/webhook/verify-milestone) and set VITE_N8N_WEBHOOK_URL=<your-url> in your .env file.",
+      "5. Redeploy the Nexrow app (npx vercel --prod)."
+    ]
+  }
+}

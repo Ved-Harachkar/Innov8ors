@@ -12,6 +12,7 @@ class NexrowDBClass {
     this.submissions = [];
     this.payments = [];
     this.verificationResults = [];
+    this.freelancers = [];
     this._synced = false;
   }
 
@@ -20,17 +21,22 @@ class NexrowDBClass {
     if (!user) return;
     try {
       if (db) {
-        const q1 = query(collection(db, 'projects'), where('client_id', '==', user.id));
-        const q2 = query(collection(db, 'projects'), where('freelancer_email', '==', user.email));
-        const q3 = query(collection(db, 'projects'), where('freelancer_email', '==', 'Open Pool (Any Freelancer)'));
-        
-        const [snap1, snap2, snap3] = await Promise.all([
-          getDocs(q1).catch(() => ({ docs: [] })),
-          getDocs(q2).catch(() => ({ docs: [] })),
-          getDocs(q3).catch(() => ({ docs: [] }))
-        ]);
-
-        const projectDocs = [...(snap1.docs || []), ...(snap2.docs || []), ...(snap3.docs || [])];
+        let projectDocs = [];
+        if (user.id === 'admin_sys' || user.email?.toLowerCase().includes('admin')) {
+          const snapAll = await getDocs(collection(db, 'projects')).catch(() => ({ docs: [] }));
+          projectDocs = snapAll.docs || [];
+        } else {
+          const q1 = query(collection(db, 'projects'), where('client_id', '==', user.id));
+          const q2 = query(collection(db, 'projects'), where('freelancer_email', '==', user.email));
+          const q3 = query(collection(db, 'projects'), where('freelancer_email', '==', 'Open Pool (Any Freelancer)'));
+          
+          const [snap1, snap2, snap3] = await Promise.all([
+            getDocs(q1).catch(() => ({ docs: [] })),
+            getDocs(q2).catch(() => ({ docs: [] })),
+            getDocs(q3).catch(() => ({ docs: [] }))
+          ]);
+          projectDocs = [...(snap1.docs || []), ...(snap2.docs || []), ...(snap3.docs || [])];
+        }
         const loadedProjects = [];
 
         projectDocs.forEach(d => {
@@ -76,13 +82,45 @@ class NexrowDBClass {
                   orderIndex: mdata.order_index,
                   workflowStatus: mdata.workflow_status || 'PENDING',
                   paymentStatus: mdata.payment_status || 'UNFUNDED',
-                  createdAt: mdata.created_at
+                  createdAt: mdata.created_at,
+                  proofText: mdata.proof_text || '',
+                  proofFileName: mdata.proof_file_name || '',
+                  proofFileData: mdata.proof_file_data || '',
+                  aiFeedback: mdata.ai_feedback || '',
+                  aiStatus: mdata.ai_status || ''
                 });
               }
             });
           }));
-          if (loadedMilestones.length > 0) {
+           if (loadedMilestones.length > 0) {
             this.milestones = loadedMilestones;
+          }
+
+          // Fetch payments for all loaded projects
+          const loadedPayments = [];
+          await Promise.all(projectIds.map(async (pid) => {
+            const pq = query(collection(db, 'payments'), where('project_id', '==', pid));
+            const pSnap = await getDocs(pq).catch(() => ({ docs: [] }));
+            pSnap.docs.forEach(pd => {
+              const pdata = pd.data();
+              if (!loadedPayments.find(p => p.id === pd.id)) {
+                loadedPayments.push({
+                  id: pd.id,
+                  milestoneId: pdata.milestone_id,
+                  projectId: pdata.project_id,
+                  amount: pdata.amount,
+                  txId: pdata.tx_id,
+                  status: pdata.status || 'COMPLETED',
+                  sender: pdata.sender || null,
+                  receiver: pdata.receiver || null,
+                  assetId: pdata.asset_id || null,
+                  createdAt: pdata.created_at
+                });
+              }
+            });
+          }));
+          if (loadedPayments.length > 0) {
+            this.payments = loadedPayments;
           }
         }
       }
@@ -269,6 +307,11 @@ class NexrowDBClass {
           const dbUpdates = {};
           if (updates.workflowStatus) dbUpdates.workflow_status = updates.workflowStatus;
           if (updates.paymentStatus) dbUpdates.payment_status = updates.paymentStatus;
+          if (updates.proofText !== undefined) dbUpdates.proof_text = updates.proofText;
+          if (updates.proofFileName !== undefined) dbUpdates.proof_file_name = updates.proofFileName;
+          if (updates.proofFileData !== undefined) dbUpdates.proof_file_data = updates.proofFileData;
+          if (updates.aiFeedback !== undefined) dbUpdates.ai_feedback = updates.aiFeedback;
+          if (updates.aiStatus !== undefined) dbUpdates.ai_status = updates.aiStatus;
           await updateDoc(doc(db, 'milestones', id), dbUpdates);
         }
       } catch (e) {
@@ -308,6 +351,14 @@ class NexrowDBClass {
     return this.payments.filter(p => p.projectId === projectId);
   }
 
+  getUserPayments(address) {
+    if (!address) return [];
+    return this.payments.filter(p => 
+      (p.sender && p.sender.toLowerCase() === address.toLowerCase()) || 
+      (p.receiver && p.receiver.toLowerCase() === address.toLowerCase())
+    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
   async createPayment(data) {
     const payment = {
       id: data.id || 'PAY-' + Date.now(),
@@ -322,6 +373,25 @@ class NexrowDBClass {
       createdAt: new Date().toISOString()
     };
     this.payments.push(payment);
+
+    // Sync to Firestore
+    try {
+      if (db) {
+        await setDoc(doc(db, 'payments', payment.id), {
+          milestone_id: payment.milestoneId,
+          project_id: payment.projectId,
+          amount: payment.amount,
+          tx_id: payment.txId,
+          status: payment.status,
+          sender: payment.sender,
+          receiver: payment.receiver,
+          asset_id: payment.assetId,
+          created_at: payment.createdAt
+        });
+      }
+    } catch (e) {
+      console.warn('Firestore payment insert failed:', e);
+    }
     return payment;
   }
 
@@ -341,6 +411,46 @@ class NexrowDBClass {
 
   getSubmissionVerification(submissionId) {
     return this.verificationResults.find(v => v.submissionId === submissionId) || null;
+  }
+
+  // ── FREELANCER OPERATIONS ──
+  async loadFreelancers() {
+    try {
+      if (db) {
+        const snap = await getDocs(collection(db, 'freelancers')).catch(() => ({ docs: [] }));
+        const loaded = [];
+        snap.docs.forEach(d => {
+          const data = d.data();
+          loaded.push({
+            id: d.id,
+            name: data.name,
+            domain: data.domain,
+            experience: data.experience,
+            rating: data.rating,
+            completedProjects: data.completed_projects,
+            hourlyRate: data.hourly_rate,
+            hourlyRateDisplay: data.hourly_rate_display,
+            location: data.location,
+            availability: data.availability,
+            bio: data.bio,
+            email: data.email,
+            joinedAt: data.joined_at
+          });
+        });
+        if (loaded.length > 0) {
+          this.freelancers = loaded;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load freelancers from Firestore:', e);
+    }
+    return this.freelancers;
+  }
+
+  getFreelancers() { return [...this.freelancers]; }
+
+  getFreelancer(id) {
+    return this.freelancers.find(f => f.id === id) || null;
   }
 }
 
